@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Project Management</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f2f2; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .signup-container {
+      width: 100%; max-width: 400px; padding: 20px;
+      background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h2 { text-align: center; color: #007bff; margin-bottom: 20px; }
+    input[type="email"], input[type="password"] {
+      width: calc(100% - 22px); /* Account for padding */
+      padding: 10px; margin: 10px 0;
+      border: 1px solid #ccc; border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%; padding: 10px; background: #007bff; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
+      font-size: 18px; margin-top: 10px;
+    }
+    button:hover { background: #0056b3; }
+    .message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      display: none; /* Hidden by default */
+    }
+    .message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .link-text {
+      margin-top: 20px;
+      font-size: 0.9em;
+    }
+    .link-text a {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .link-text a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="signup-container">
+    <h2>Create Account</h2>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+    <button id="signupBtn">Sign Up</button>
+    <div id="message" class="message"></div>
+    <p class="link-text">Already have an account? <a href="login.html">Login here</a></p>
+  </div>
+
+  <script>
+    // YOUR FIREBASE CONFIGURATION HERE
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth(); // Get a reference to the Auth service
+
+    document.getElementById('signupBtn').addEventListener('click', signup);
+
+    function showMessage(elementId, text, type) {
+        const messageElement = document.getElementById(elementId);
+        messageElement.textContent = text;
+        messageElement.className = `message ${type}`; // Apply success or error class
+        messageElement.style.display = 'block'; // Show the message
+    }
+
+    async function signup() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (password !== confirmPassword) {
+        showMessage('message', 'Passwords do not match.', 'error');
+        return;
+      }
+      if (password.length < 6) {
+        showMessage('message', 'Password should be at least 6 characters.', 'error');
+        return;
+      }
+
+      try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        showMessage('message', 'Account created successfully! Redirecting to login...', 'success');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000); // Redirect after 2 seconds
+      } catch (error) {
+        console.error("Signup error:", error);
+        showMessage('message', `Error: ${error.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
