@@ -2,20 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Project Viewer</title>
+  <title>Admin Project Media</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+    body { font-family: Arial, sans-serif; margin: 0; padding-bottom: 60px; background: #f4f6f9; }
     header { background: #007bff; color: white; padding: 20px; text-align: center; }
     .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
     .project-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .project-header h2 { margin: 0; color: #007bff; }
+    .project-header h2 { margin: 0; color: white; }
+    .back-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 0;
+      margin-right: 10px;
+    }
 
     .date-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .date-btn { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
@@ -163,41 +174,83 @@
     }
     .add-media-btn:hover { background: #218838; }
 
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--nav-bg, #fff); /* Using var for theme support */
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid var(--border, #ccc); /* Using var for theme support */
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+      z-index: 1000;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text, #222); /* Using var for theme support */
+      text-decoration: none;
+      font-size: 0.8em;
+      padding: 5px;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+
+    .nav-item:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .nav-item i {
+      font-size: 1.5em;
+      margin-bottom: 3px;
+      color: var(--primary, #007bff); /* Using var for theme support */
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="project-header container">
+      <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i></button>
       <h2 id="projectNameDisplay">Loading Project...</h2>
-      <button onclick="window.history.back()">Back to Admin Panel</button>
     </div>
   </header>
 
   <div class="container">
     <div class="date-buttons" id="dateButtons">
-      </div>
+      <!-- Date buttons will be loaded here -->
+    </div>
 
     <div class="category-tabs" id="categoryTabs">
-      </div>
+      <!-- Category tabs will be loaded here -->
+    </div>
 
     <button class="add-media-btn" onclick="openAddMediaForm()">Add New Media</button>
 
     <div id="formContainer">
       <h3>Add New Media Entry</h3>
-      <input type="text" id="mediaTitle" placeholder="Media Title">
-      <input type="text" id="mediaLat" placeholder="Latitude (optional)">
-      <input type="text" id="mediaLon" placeholder="Longitude (optional)">
-      <input type="file" id="mediaFile" accept="image/*,video/*"> <button onclick="uploadMediaAndSave()">Upload & Save Media</button>
+      <input type="text" id="mediaTitle" placeholder="Media Title" required>
+      <input type="number" id="mediaLat" placeholder="Latitude (optional)" step="any">
+      <input type="number" id="mediaLon" placeholder="Longitude (optional)" step="any">
+      <input type="file" id="mediaFile" accept="image/*,video/*" required> <!-- File input for upload -->
+      <button onclick="uploadMediaAndSave()">Upload & Save Media</button>
       <button onclick="document.getElementById('formContainer').style.display='none'">Cancel</button>
       <p id="uploadStatus"></p>
     </div>
 
     <div id="mediaGrid">
-      </div>
+      <!-- Media items will be loaded here -->
+    </div>
 
     <div id="map"></div>
   </div>
 
+  <!-- Overlay for full media view -->
   <div id="overlay" onclick="closeOverlay(event)">
     <div class="media-viewer">
       <button class="close-btn" onclick="closeOverlay(event)">&times;</button>
@@ -207,20 +260,32 @@
     </div>
   </div>
 
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <i class="fas fa-home"></i>
+      Projects
+    </a>
+    <a href="admin-panel.html" class="nav-item">
+      <i class="fas fa-plus-circle"></i>
+      Add Project
+    </a>
+  </nav>
+
   <script>
     // YOUR FIREBASE CONFIGURATION HERE
-const firebaseConfig = {
-  apiKey: "AIzaSyA1czRjhbfYGqGsGFul49vvjaSZnARSkVE",
-  authDomain: "siteview-3bc59.firebaseapp.com",
-  databaseURL: "https://siteview-3bc59-default-rtdb.firebaseio.com",
-  projectId: "siteview-3bc59",
-  storageBucket: "siteview-3bc59.firebasestorage.app",
-  messagingSenderId: "941487179656",
-  appId: "1:941487179656:web:6d7c3eb02b61a0856a9c3d",
-  measurementId: "G-W9DN8D8HRM"
-};
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
     // YOUR CLOUDINARY CONFIGURATION HERE
@@ -234,65 +299,79 @@ const firebaseConfig = {
     let map;
     let markers = [];
     let mediaList = []; // Holds current media for overlay navigation
-    let currentIndex = 0;
+    let currentUserUid = null; // To store authenticated user's UID
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const params = new URLSearchParams(window.location.search);
-      projectKey = params.get('project');
+    // Check authentication state on page load
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUserUid = user.uid;
+        const params = new URLSearchParams(window.location.search);
+        projectKey = params.get('project');
 
-      if (!projectKey) {
-        alert("No project selected. Redirecting to admin panel.");
-        window.location.href = "admin-panel.html";
-        return;
+        if (!projectKey) {
+          alert("No project selected. Redirecting to projects list.");
+          window.location.href = "index.html"; // Redirect to user's project list
+          return;
+        }
+        loadProjectDetails(currentUserUid); // Pass UID to ensure ownership check
+        initializeMap();
+      } else {
+        alert("You are not logged in. Redirecting to login page.");
+        window.location.href = 'login.html';
       }
-
-      loadProjectDetails();
-      initializeMap();
     });
 
-    async function loadProjectDetails() {
-      // Get project name for display
+    async function loadProjectDetails(userId) {
+      // Get project name for display and ensure ownership
       db.ref(`projects/${projectKey}`).once('value')
         .then(snapshot => {
           if (snapshot.exists()) {
-            document.getElementById('projectNameDisplay').textContent = snapshot.val().projectName || 'Project Details';
+            const proj = snapshot.val();
+            if (proj.ownerId === userId) { // Check if the logged-in user owns this project
+              document.getElementById('projectNameDisplay').textContent = proj.projectName || 'Project Details';
+            } else {
+              alert("You do not have permission to view this project. Redirecting.");
+              window.location.href = "index.html";
+              return;
+            }
           } else {
-            document.getElementById('projectNameDisplay').textContent = 'Project Not Found';
+            alert("Project not found. Redirecting.");
+            window.location.href = "index.html";
+            return;
           }
+          // Load media dates and categories only after project ownership is confirmed
+          db.ref(`projectMedia/${projectKey}`).on('value', (mediaSnapshot) => {
+            const datesData = mediaSnapshot.val();
+            if (datesData) {
+              renderDateButtons(Object.keys(datesData).sort());
+              if (!selectedDate) {
+                  selectedDate = Object.keys(datesData).sort()[0];
+              }
+              if (selectedDate && datesData[selectedDate]) {
+                  renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
+                  if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
+                      selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
+                  }
+              } else {
+                  renderCategoryTabs([]);
+                  selectedCategory = null;
+              }
+            } else {
+              renderDateButtons([]);
+              renderCategoryTabs([]);
+              selectedDate = null;
+              selectedCategory = null;
+            }
+            loadMedia();
+          }, (error) => {
+              console.error("Firebase media dates/categories load error:", error);
+          });
         })
         .catch(error => {
-          console.error("Error loading project name:", error);
-          document.getElementById('projectNameDisplay').textContent = 'Error Loading Project';
+          console.error("Error loading project details or checking ownership:", error);
+          alert("Error loading project details. Redirecting.");
+          window.location.href = "index.html";
         });
-
-      // Load media dates and categories
-      db.ref(`projectMedia/${projectKey}`).on('value', (snapshot) => {
-        const datesData = snapshot.val();
-        if (datesData) {
-          renderDateButtons(Object.keys(datesData).sort());
-          // Set initial date/category if available, otherwise just first date
-          if (!selectedDate) {
-              selectedDate = Object.keys(datesData).sort()[0];
-          }
-          if (selectedDate && datesData[selectedDate]) {
-              renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
-              if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
-                  selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
-              }
-          } else {
-              renderCategoryTabs([]); // No categories for selected date
-              selectedCategory = null;
-          }
-        } else {
-          renderDateButtons([]);
-          renderCategoryTabs([]);
-          selectedDate = null;
-          selectedCategory = null;
-        }
-        loadMedia(); // Load media after dates/categories are set
-      }, (error) => {
-          console.error("Firebase media dates/categories load error:", error);
-      });
     }
 
     function renderDateButtons(dates) {
@@ -309,7 +388,7 @@ const firebaseConfig = {
         button.onclick = () => {
           selectedDate = date;
           selectedCategory = null; // Reset category when date changes
-          loadProjectDetails(); // Re-load to update categories and media
+          loadProjectDetails(currentUserUid); // Re-load to update categories and media
         };
         dateButtonsContainer.appendChild(button);
       });
@@ -345,7 +424,6 @@ const firebaseConfig = {
             return;
         }
 
-        // Path to media for the selected date and category
         const mediaRef = db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}`);
 
         mediaRef.on('value', (snapshot) => {
@@ -354,7 +432,7 @@ const firebaseConfig = {
                 snapshot.forEach((childSnapshot) => {
                     const mediaKey = childSnapshot.key;
                     const media = childSnapshot.val();
-                    mediaList.push({ key: mediaKey, ...media }); // Store with key for deletion
+                    mediaList.push({ key: mediaKey, ...media });
 
                     const item = document.createElement('div');
                     item.className = 'media-item';
@@ -376,10 +454,10 @@ const firebaseConfig = {
                         markers.push(marker);
                     }
                 });
-                document.getElementById('map').style.display = 'block'; // Show map if media exists
+                document.getElementById('map').style.display = 'block';
             } else {
                 mediaGrid.innerHTML = '<p>No media found for this date and category.</p>';
-                document.getElementById('map').style.display = 'none'; // Hide map if no media
+                document.getElementById('map').style.display = 'none';
             }
         }, (error) => {
             console.error("Firebase media load error:", error);
@@ -388,7 +466,7 @@ const firebaseConfig = {
     }
 
     function initializeMap() {
-      if (map) map.remove(); // Remove existing map if any
+      if (map) map.remove();
       map = L.map('map').setView([18.5204, 73.8567], 13); // Default to Pune coordinates
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -408,8 +486,8 @@ const firebaseConfig = {
       const file = fileInput.files[0];
       const uploadStatus = document.getElementById('uploadStatus');
 
-      if (!file || !title || isNaN(lat) || isNaN(lon)) {
-        alert("Please fill in Title, Latitude, Longitude, and select a file.");
+      if (!file || !title) {
+        alert("Please fill in Title and select a file.");
         return;
       }
       if (!selectedDate || !selectedCategory) {
@@ -432,28 +510,25 @@ const firebaseConfig = {
 
         if (data.secure_url) {
           uploadStatus.textContent = 'Upload successful!';
-          const mediaType = data.resource_type; // 'image' or 'video'
+          const mediaType = data.resource_type;
 
           const newMediaEntry = {
             title: title,
-            lat: lat,
-            lon: lon,
+            lat: isNaN(lat) ? null : lat, // Store null if not a valid number
+            lon: isNaN(lon) ? null : lon, // Store null if not a valid number
             url: data.secure_url,
-            type: mediaType // Store 'image' or 'video'
+            type: mediaType
           };
 
-          // Save media entry to Firebase
           db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}`).push(newMediaEntry)
             .then(() => {
               alert("Media saved to Firebase successfully!");
               document.getElementById('formContainer').style.display = 'none';
-              // Clear form
               document.getElementById('mediaTitle').value = '';
               document.getElementById('mediaLat').value = '';
               document.getElementById('mediaLon').value = '';
-              fileInput.value = ''; // Clear file input
+              fileInput.value = '';
               uploadStatus.textContent = '';
-              // loadMedia() will automatically refresh due to .on('value') listener
             })
             .catch(error => {
               alert("Error saving media to Firebase: " + error.message);
@@ -479,7 +554,6 @@ const firebaseConfig = {
             db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}/${mediaKey}`).remove()
                 .then(() => {
                     alert("Media deleted successfully!");
-                    // The .on('value') listener will automatically refresh the grid
                 })
                 .catch(error => {
                     alert("Error deleting media: " + error.message);
@@ -488,7 +562,6 @@ const firebaseConfig = {
         }
     }
 
-    // Event delegation for delete buttons
     document.getElementById('mediaGrid').addEventListener('click', function(event) {
         if (event.target.classList.contains('delete-media-btn')) {
             const mediaKey = event.target.dataset.key;
@@ -496,7 +569,6 @@ const firebaseConfig = {
         }
     });
 
-    // Overlay functions
     function showOverlay(index) {
         if (mediaList.length === 0) return;
         currentIndex = index;
@@ -516,7 +588,7 @@ const firebaseConfig = {
     function closeOverlay(e) {
       if (e.target.id === 'overlay' || e.target.classList.contains('close-btn')) {
         document.getElementById('overlay').style.display = 'none';
-        document.getElementById('overlayContent').innerHTML = ''; // Clear content
+        document.getElementById('overlayContent').innerHTML = '';
       }
     }
 
