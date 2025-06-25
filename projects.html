@@ -5,15 +5,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Font Awesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+  <!-- Pannellum CSS & JS (for 360 images if still used - remains uncommented for your reference) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css" />
   <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <style>
@@ -72,6 +77,50 @@
       padding: 0;
       margin-right: 10px;
     }
+    .toggle-switch { /* Copied from index.html */
+      position: relative;
+      display: inline-block;
+      width: 45px;
+      height: 25px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 25px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 19px;
+      width: 19px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #007bff;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
 
     .container {
       max-width: 1000px;
@@ -100,7 +149,6 @@
     .category-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .category-tab { padding: 8px 16px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; background: var(--bg); color: var(--text); }
     .category-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-
 
     #mediaGrid {
       display: grid;
@@ -245,17 +293,21 @@
 
     <h3>Project Media</h3>
     <div class="date-buttons" id="dateButtons">
-      </div>
+      <!-- Date buttons will be loaded here -->
+    </div>
 
     <div class="category-tabs" id="categoryTabs">
-      </div>
+      <!-- Category tabs will be loaded here -->
+    </div>
 
     <div id="mediaGrid">
-      </div>
+      <!-- Media items will be loaded here -->
+    </div>
 
     <div id="map"></div>
   </div>
 
+  <!-- Overlay for full media view -->
   <div id="overlay" onclick="closeOverlay(event)">
     <div class="media-viewer">
       <button class="close-btn" onclick="closeOverlay(event)">&times;</button>
@@ -268,29 +320,29 @@
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
       <i class="fas fa-home"></i>
-      Home
+      Projects
     </a>
     <a href="admin-panel.html" class="nav-item">
-      <i class="fas fa-user-shield"></i>
-      Admin
+      <i class="fas fa-plus-circle"></i>
+      Add Project
     </a>
   </nav>
 
   <script>
     // YOUR FIREBASE CONFIGURATION HERE
     const firebaseConfig = {
-  apiKey: "AIzaSyA1czRjhbfYGqGsGFul49vvjaSZnARSkVE",
-  authDomain: "siteview-3bc59.firebaseapp.com",
-  databaseURL: "https://siteview-3bc59-default-rtdb.firebaseio.com",
-  projectId: "siteview-3bc59",
-  storageBucket: "siteview-3bc59.firebasestorage.app",
-  messagingSenderId: "941487179656",
-  appId: "1:941487179656:web:6d7c3eb02b61a0856a9c3d",
-  measurementId: "G-W9DN8D8HRM"
-};
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.database();
 
     let projectKey;
@@ -299,72 +351,92 @@
     let map;
     let markers = [];
     let mediaList = []; // Holds current media for overlay navigation
-    let currentIndex = 0;
+    let currentUserUid = null;
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUserUid = user.uid;
+        const params = new URLSearchParams(window.location.search);
+        projectKey = params.get('project');
+
+        if (!projectKey) {
+          alert("No project selected. Redirecting to projects list.");
+          window.location.href = "index.html";
+          return;
+        }
+        loadProjectDataAndMedia(currentUserUid); // Pass UID to check ownership
+        initializeMap();
+      } else {
+        alert("You are not logged in. Redirecting to login page.");
+        window.location.href = 'login.html';
+      }
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
       applySavedTheme();
-      const params = new URLSearchParams(window.location.search);
-      projectKey = params.get('project');
-
-      if (!projectKey) {
-        document.getElementById('projectNameDisplay').textContent = "Project Not Found";
-        document.getElementById('projectLocationDisplay').textContent = "N/A";
-        document.getElementById('projectClientDisplay').textContent = "N/A";
-        document.getElementById('mediaGrid').innerHTML = "<p>No project selected to display.</p>";
-        return;
-      }
-
-      loadProjectDataAndMedia();
-      initializeMap();
+      // DOMContentLoaded is handled by onAuthStateChanged now for data loading
     });
 
-    async function loadProjectDataAndMedia() {
-      // Load main project details (name, location, client)
+    async function loadProjectDataAndMedia(userId) {
+      // Load main project details (name, location, client) and check ownership
       db.ref(`projects/${projectKey}`).on('value', (snapshot) => {
         if (snapshot.exists()) {
           const proj = snapshot.val();
-          document.getElementById('projectNameDisplay').textContent = proj.projectName || 'Project Details';
-          document.getElementById('projectLocationDisplay').textContent = proj.location || 'N/A';
-          document.getElementById('projectClientDisplay').textContent = proj.client || 'N/A';
+          if (proj.ownerId === userId) { // Crucial ownership check
+            document.getElementById('projectNameDisplay').textContent = proj.projectName || 'Project Details';
+            document.getElementById('projectLocationDisplay').textContent = proj.location || 'N/A';
+            document.getElementById('projectClientDisplay').textContent = proj.client || 'N/A';
+            // Only proceed to load media if ownership is confirmed
+            loadMediaForProject();
+          } else {
+            alert("You do not have permission to view this project. Redirecting to your projects.");
+            window.location.href = "index.html"; // Redirect if not owner
+          }
         } else {
           document.getElementById('projectNameDisplay').textContent = 'Project Not Found';
           document.getElementById('projectLocationDisplay').textContent = 'N/A';
           document.getElementById('projectClientDisplay').textContent = 'N/A';
+          alert("Project not found. Redirecting to your projects.");
+          window.location.href = "index.html"; // Redirect if project doesn't exist
         }
       }, (error) => {
           console.error("Firebase project details load error:", error);
           document.getElementById('projectNameDisplay').textContent = 'Error Loading Project';
-      });
-
-      // Load media dates and categories
-      db.ref(`projectMedia/${projectKey}`).on('value', (snapshot) => {
-        const datesData = snapshot.val();
-        if (datesData) {
-          renderDateButtons(Object.keys(datesData).sort());
-          // Set initial date/category if available, otherwise just first date
-          if (!selectedDate) {
-              selectedDate = Object.keys(datesData).sort()[0];
-          }
-          if (selectedDate && datesData[selectedDate]) {
-              renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
-              if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
-                  selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
-              }
-          } else {
-              renderCategoryTabs([]); // No categories for selected date
-              selectedCategory = null;
-          }
-        } else {
-          renderDateButtons([]);
-          renderCategoryTabs([]);
-          selectedDate = null;
-          selectedCategory = null;
-        }
-        loadMedia(); // Load media after dates/categories are set
-      }, (error) => {
-          console.error("Firebase media dates/categories load error:", error);
+          alert("Error loading project details. Redirecting.");
+          window.location.href = "index.html";
       });
     }
+
+    function loadMediaForProject() {
+        // Load media dates and categories
+        db.ref(`projectMedia/${projectKey}`).on('value', (snapshot) => {
+            const datesData = snapshot.val();
+            if (datesData) {
+              renderDateButtons(Object.keys(datesData).sort());
+              if (!selectedDate) {
+                  selectedDate = Object.keys(datesData).sort()[0];
+              }
+              if (selectedDate && datesData[selectedDate]) {
+                  renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
+                  if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
+                      selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
+                  }
+              } else {
+                  renderCategoryTabs([]);
+                  selectedCategory = null;
+              }
+            } else {
+              renderDateButtons([]);
+              renderCategoryTabs([]);
+              selectedDate = null;
+              selectedCategory = null;
+            }
+            loadMedia();
+        }, (error) => {
+            console.error("Firebase media dates/categories load error:", error);
+        });
+    }
+
 
     function renderDateButtons(dates) {
       const dateButtonsContainer = document.getElementById('dateButtons');
@@ -380,7 +452,7 @@
         button.onclick = () => {
           selectedDate = date;
           selectedCategory = null; // Reset category when date changes
-          loadProjectDataAndMedia(); // Re-load to update categories and media
+          loadMedia(); // Only reload media for same date, new category
         };
         dateButtonsContainer.appendChild(button);
       });
@@ -445,10 +517,10 @@
                         markers.push(marker);
                     }
                 });
-                document.getElementById('map').style.display = 'block'; // Show map if media exists
+                document.getElementById('map').style.display = 'block';
             } else {
                 mediaGrid.innerHTML = '<p>No media found for this date and category.</p>';
-                document.getElementById('map').style.display = 'none'; // Hide map if no media
+                document.getElementById('map').style.display = 'none';
             }
         }, (error) => {
             console.error("Firebase media load error:", error);
@@ -458,7 +530,7 @@
 
 
     function initializeMap() {
-      if (map) map.remove(); // Remove existing map if any
+      if (map) map.remove();
       map = L.map('map').setView([18.5204, 73.8567], 13); // Default to Pune coordinates
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -470,7 +542,6 @@
       markers = [];
     }
 
-    // Overlay functions
     function showOverlay(index) {
         if (mediaList.length === 0) return;
         currentIndex = index;
@@ -490,7 +561,7 @@
     function closeOverlay(e) {
       if (e.target.id === 'overlay' || e.target.classList.contains('close-btn')) {
         document.getElementById('overlay').style.display = 'none';
-        document.getElementById('overlayContent').innerHTML = ''; // Clear content
+        document.getElementById('overlayContent').innerHTML = '';
       }
     }
 
