@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f2f2; margin: 0; padding: 0; }
+    .login-container {
+      width: 100%; max-width: 400px; margin: 100px auto; padding: 20px;
+      background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #007bff; }
+    input[type="email"], input[type="password"], input[type="text"] {
+      width: 100%; padding: 10px; margin: 10px 0;
+      border: 1px solid #ccc; border-radius: 5px;
+    }
+    button {
+      padding: 10px; background: #007bff; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
+      margin-top: 10px; /* Added for general buttons */
+    }
+    button:hover { background: #0056b3; }
+    #projectList { padding: 20px; max-width: 1000px; margin: auto; display: none; }
+    .project-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer; /* To indicate clickable for viewing */
+    }
+    .project-details { flex-grow: 1; }
+    .project-details div { margin-bottom: 5px; }
+    .project-details .project-name { font-weight: bold; font-size: 1.1em; color: #007bff; }
+    .edit-btn {
+      padding: 8px 15px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .edit-btn:hover { background: #218838; }
+    .delete-btn {
+      padding: 8px 15px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .delete-btn:hover { background: #c82333; }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .close-button {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close-button:hover,
+    .close-button:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .modal-content input, .modal-content textarea {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .modal-content button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container" id="loginContainer">
+    <h2>Admin Login</h2>
+    <input type="email" id="adminEmail" placeholder="Email">
+    <input type="password" id="adminPassword" placeholder="Password">
+    <button id="loginBtn">Login</button>
+  </div>
+
+  <div id="projectList">
+    <h2>Project Dashboard</h2>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
+      <input type="text" id="searchInput" placeholder="Search projects..." style="width: 70%; margin: 0;">
+      <button id="addProjectBtn" style="width: 25%; margin: 0;">Add New Project</button>
+    </div>
+    <div id="projectsContainer">
+      </div>
+  </div>
+
+  <div id="projectModal" class="modal">
+    <div class="modal-content">
+      <span class="close-button" onclick="closeModal()">&times;</span>
+      <h3 id="modalTitle">Add New Project</h3>
+      <input type="text" id="projectName" placeholder="Project Name">
+      <input type="text" id="projectLocation" placeholder="Location">
+      <input type="text" id="projectThumbnail" placeholder="Thumbnail Image URL (e.g., Cloudinary URL)">
+      <input type="text" id="projectClient" placeholder="Client Name (Optional)">
+      <input type="hidden" id="currentProjectKey">
+      <button id="saveProjectBtn" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+
+  <script>
+    // YOUR FIREBASE CONFIGURATION HERE
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL", // Make sure this is present for Realtime Database
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database(); // Get a reference to the Realtime Database service
+    // For Firebase Authentication (if you implement it)
+    // const auth = firebase.auth();
+
+    let allProjects = []; // To store projects for filtering and display
+
+    // --- Authentication (Placeholder - Replace with actual Firebase Auth if needed) ---
+    // For now, a very basic "login" check. For production, use Firebase Auth.
+    function login() {
+      const email = document.getElementById("adminEmail").value;
+      const password = document.getElementById("adminPassword").value;
+
+      // Simple dummy login check (NOT SECURE for production)
+      if (email === "admin@example.com" && password === "password123") {
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("projectList").style.display = "block";
+        loadProjects(); // Load projects after "login"
+      } else {
+        alert("Invalid credentials. Use admin@example.com / password123 (for demo).");
+        // With Firebase Auth:
+        // auth.signInWithEmailAndPassword(email, password)
+        //   .then((userCredential) => {
+        //     document.getElementById("loginContainer").style.display = "none";
+        //     document.getElementById("projectList").style.display = "block";
+        //     loadProjects();
+        //   })
+        //   .catch((error) => {
+        //     alert(`Login failed: ${error.message}`);
+        //   });
+      }
+    }
+    // --- End Authentication Placeholder ---
+
+    function loadProjects() {
+      const container = document.getElementById("projectsContainer");
+      container.innerHTML = "<p>Loading projects...</p>";
+      allProjects = []; // Clear previous projects
+
+      db.ref('projects').on('value', (snapshot) => {
+        container.innerHTML = ''; // Clear existing projects
+        if (snapshot.exists()) {
+          snapshot.forEach(childSnapshot => {
+            const key = childSnapshot.key;
+            const proj = childSnapshot.val();
+
+            const div = document.createElement('div');
+            div.className = 'project-info';
+            div.innerHTML = `
+              <div class="project-details">
+                <div class="project-name">${proj.projectName || 'N/A'}</div>
+                <div>Location: ${proj.location || 'N/A'}</div>
+                <div>Client: ${proj.client || 'N/A'}</div>
+              </div>
+              <button class="edit-btn">Edit</button>
+              <button class="delete-btn">Delete</button>
+            `;
+
+            div.querySelector(".edit-btn").addEventListener("click", function(e) {
+              e.stopPropagation(); // Prevent project view click
+              openModal(key, proj);
+            });
+
+            div.querySelector(".delete-btn").addEventListener("click", function(e) {
+              e.stopPropagation(); // Prevent project view click
+              if (confirm(`Are you sure you want to delete project: ${proj.projectName}?`)) {
+                deleteProject(key);
+              }
+            });
+
+            div.addEventListener("click", function () {
+              // Navigate to admin-projects.html to view/manage media for this project
+              window.location.href = `admin-projects.html?project=${encodeURIComponent(key)}`;
+            });
+
+            container.appendChild(div);
+            allProjects.push({ key, name: proj.projectName, location: proj.location, client: proj.client, element: div });
+          });
+        } else {
+          container.innerHTML = "<p>No projects added yet.</p>";
+        }
+      }, (error) => {
+        console.error("Firebase data load error:", error);
+        container.innerHTML = `<p style='color:red'>Could not load projects: ${error.message}</p>`;
+      });
+    }
+
+    function filterProjects() {
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      allProjects.forEach(p => {
+        const match = (p.name || "").toLowerCase().includes(search) ||
+                      (p.location || "").toLowerCase().includes(search) ||
+                      (p.client || "").toLowerCase().includes(search);
+        p.element.style.display = match ? "" : "none";
+      });
+    }
+
+    function openModal(projectKey = null, projectData = null) {
+      document.getElementById('modalTitle').textContent = projectKey ? 'Edit Project' : 'Add New Project';
+      document.getElementById('currentProjectKey').value = projectKey || '';
+      document.getElementById('projectName').value = projectData ? projectData.projectName || '' : '';
+      document.getElementById('projectLocation').value = projectData ? projectData.location || '' : '';
+      document.getElementById('projectThumbnail').value = projectData ? projectData.thumbnail || '' : '';
+      document.getElementById('projectClient').value = projectData ? projectData.client || '' : '';
+
+      document.getElementById('projectModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('projectModal').style.display = 'none';
+      // Clear form fields
+      document.getElementById('projectName').value = '';
+      document.getElementById('projectLocation').value = '';
+      document.getElementById('projectThumbnail').value = '';
+      document.getElementById('projectClient').value = '';
+      document.getElementById('currentProjectKey').value = '';
+    }
+
+    function saveProject() {
+      const projectKey = document.getElementById('currentProjectKey').value;
+      const projectName = document.getElementById('projectName').value;
+      const projectLocation = document.getElementById('projectLocation').value;
+      const projectThumbnail = document.getElementById('projectThumbnail').value;
+      const projectClient = document.getElementById('projectClient').value;
+
+      if (!projectName || !projectLocation || !projectThumbnail) {
+        alert("Project Name, Location, and Thumbnail are required.");
+        return;
+      }
+
+      const projectData = {
+        projectName: projectName,
+        location: projectLocation,
+        thumbnail: projectThumbnail,
+        client: projectClient
+        // You might also want to add a 'file' field here if it's still relevant,
+        // but typically with Firebase, you'd store all data directly or under sub-nodes.
+        // For now, I'm omitting 'file' as it was for local JSON linking.
+      };
+
+      if (projectKey) {
+        // Update existing project
+        db.ref(`projects/${projectKey}`).set(projectData)
+          .then(() => {
+            alert("Project updated successfully!");
+            closeModal();
+            // loadProjects() will automatically refresh due to .on('value') listener
+          })
+          .catch(error => {
+            alert("Error updating project: " + error.message);
+            console.error("Error updating project:", error);
+          });
+      } else {
+        // Add new project
+        db.ref('projects').push(projectData)
+          .then(() => {
+            alert("Project added successfully!");
+            closeModal();
+            // loadProjects() will automatically refresh due to .on('value') listener
+          })
+          .catch(error => {
+            alert("Error adding project: " + error.message);
+            console.error("Error adding project:", error);
+          });
+      }
+    }
+
+    function deleteProject(projectKey) {
+      db.ref(`projects/${projectKey}`).remove()
+        .then(() => {
+          alert("Project deleted successfully!");
+          // loadProjects() will automatically refresh due to .on('value') listener
+        })
+        .catch(error => {
+          alert("Error deleting project: " + error.message);
+          console.error("Error deleting project:", error);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("loginBtn").addEventListener("click", login);
+      document.getElementById("addProjectBtn").addEventListener("click", () => openModal());
+      document.getElementById("searchInput").addEventListener("input", filterProjects);
+
+      // Close modal when clicking outside
+      window.onclick = function(event) {
+        const modal = document.getElementById('projectModal');
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      }
+    });
+  </script>
+</body>
+</html>
