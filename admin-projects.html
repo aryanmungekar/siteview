@@ -15,6 +15,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+  <!-- exif-js library for reading EXIF data from images -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding-bottom: 60px; background: #f4f6f9; }
     header { background: #007bff; color: white; padding: 20px; text-align: center; }
@@ -265,7 +268,8 @@
       <input type="text" id="mediaTitle" placeholder="Media Title" required>
       <input type="number" id="mediaLat" placeholder="Latitude (optional)" step="any">
       <input type="number" id="mediaLon" placeholder="Longitude (optional)" step="any">
-      <input type="file" id="mediaFile" accept="image/*,video/*" required> <!-- File input for upload -->
+      <input type="file" id="mediaFile" accept="image/*,video/*"> <!-- Removed required, as video may not have EXIF -->
+      <p id="exifStatus"></p> <!-- To show EXIF extraction status -->
       <button onclick="uploadMediaAndSave()">Upload & Save Media</button>
       <button onclick="document.getElementById('formContainer').style.display='none'">Cancel</button>
       <p id="uploadStatus"></p>
@@ -368,6 +372,48 @@
         document.getElementById('mediaDate').value = formatDate(new Date());
     }
 
+    // New function to convert EXIF GPS data to decimal degrees
+    function convertToDecimal(deg, ref) {
+        const degrees = deg[0] + deg[1] / 60 + deg[2] / 3600;
+        return (ref == 'S' || ref == 'W') ? -degrees : degrees;
+    }
+
+    // Event listener for file input to extract EXIF data
+    document.getElementById('mediaFile').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        const exifStatus = document.getElementById('exifStatus');
+        const mediaLatInput = document.getElementById('mediaLat');
+        const mediaLonInput = document.getElementById('mediaLon');
+
+        // Clear previous values
+        mediaLatInput.value = '';
+        mediaLonInput.value = '';
+        exifStatus.textContent = '';
+
+        if (file && (file.type === 'image/jpeg' || file.type === 'image/tiff')) {
+            exifStatus.textContent = 'Reading EXIF data...';
+            EXIF.getData(file, function() {
+                const lat = EXIF.GPSLatitude;
+                const latRef = EXIF.GPSLatitudeRef;
+                const lon = EXIF.GPSLongitude;
+                const lonRef = EXIF.GPSLongitudeRef;
+
+                if (lat && latRef && lon && lonRef) {
+                    const decimalLat = convertToDecimal(lat, latRef);
+                    const decimalLon = convertToDecimal(lon, lonRef);
+                    mediaLatInput.value = decimalLat.toFixed(7); // To 7 decimal places for precision
+                    mediaLonInput.value = decimalLon.toFixed(7);
+                    exifStatus.textContent = 'GPS coordinates loaded from EXIF.';
+                } else {
+                    exifStatus.textContent = 'No GPS data found in EXIF.';
+                }
+            });
+        } else if (file) {
+            exifStatus.textContent = 'EXIF data only supported for JPEG/TIFF images.';
+        }
+    });
+
+
     async function loadProjectDetails(userId) {
       // Get project name for display and ensure ownership
       db.ref(`projects/${projectKey}`).once('value')
@@ -436,14 +482,13 @@
       const dateButtonsContainer = document.getElementById('dateButtons');
       dateButtonsContainer.innerHTML = ''; // Clear previous content
       if (dates.length === 0) {
-        dateButtonsContainer.innerHTML = '<p>No dates with media yet.</p><button onclick="setCurrentDateToToday()">Set Current Date to Today</button>';
-        return;
+        dateButtonsContainer.innerHTML = '<p>No dates with media yet.</p>';
       }
-      // Add a 'Set Today' button even if dates exist
+      // Add a 'Set Today' button even if dates exist (or if none)
       const setTodayBtn = document.createElement('button');
       setTodayBtn.textContent = 'Set Current Date to Today';
       setTodayBtn.onclick = setCurrentDateToToday;
-      dateButtonsContainer.appendChild(setTodayBtn);
+      dateButtonsContainer.appendChild(setTodayBtn); // Always add this button
 
       dates.forEach(date => {
         const button = document.createElement('button');
@@ -599,6 +644,7 @@
               document.getElementById('mediaLat').value = '';
               document.getElementById('mediaLon').value = '';
               fileInput.value = '';
+              document.getElementById('exifStatus').textContent = ''; // Clear EXIF status
               uploadStatus.textContent = '';
               
               // After adding new media, update selectedDate/Category and reload to ensure buttons reflect new data
@@ -658,29 +704,13 @@
         currentIndex = index;
         const item = mediaList[currentIndex];
         const overlayContent = document.getElementById('overlayContent');
-        // Check if item.url is a 360 image (e.g., if you have a specific property for it)
-        // For now, assume a regular image or video
+        
+        // Pannellum for panoramic images could be re-integrated here
+        // For now, assuming direct image/video display
         overlayContent.innerHTML = item.type === 'video'
             ? `<video src="${item.url}" controls autoplay loop></video>`
             : `<img src="${item.url}" alt="${item.title}">`;
         
-        // If it's a panoramic image and you want to use Pannellum:
-        // if (item.type === 'panoramic' && pannellum) { // Assuming pannellum is globally available
-        //     overlayContent.innerHTML = `<div id="pannellum-viewer" style="width:100%; height:80vh;"></div>`;
-        //     pannellum.viewer('pannellum-viewer', {
-        //         "type": "equirectangular",
-        //         "panorama": item.url,
-        //         "autoLoad": true,
-        //         "autoRotate": -2,
-        //         "showZoomCtrl": false
-        //     });
-        // } else {
-        //     overlayContent.innerHTML = item.type === 'video'
-        //         ? `<video src="${item.url}" controls autoplay loop></video>`
-        //         : `<img src="${item.url}" alt="${item.title}">`;
-        // }
-
-
         document.getElementById('overlay').style.display = 'flex';
     }
 
@@ -699,9 +729,18 @@
     function openAddMediaForm() {
       // Set default date to today when opening the form for convenience
       document.getElementById('mediaDate').value = formatDate(new Date());
+      // Clear EXIF status and Lat/Lon fields when opening the form
+      document.getElementById('exifStatus').textContent = '';
+      document.getElementById('mediaLat').value = '';
+      document.getElementById('mediaLon').value = '';
+      document.getElementById('mediaFile').value = ''; // Clear file input
+      document.getElementById('mediaTitle').value = ''; // Clear title input
+      document.getElementById('mediaCategory').value = ''; // Clear category selection
+
       document.getElementById('formContainer').style.display = 'block';
     }
   </script>
 </body>
 </html>
+
 
