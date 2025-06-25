@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Project Details</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css" />
+  <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --text: #222;
+      --primary: #007bff;
+      --card-bg: #fff;
+      --nav-bg: #ffffff;
+      --border: #ccc;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #eee;
+      --primary: #64b5f6;
+      --card-bg: #1f1f1f;
+      --nav-bg: #181818;
+      --border: #333;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding-bottom: 60px; /* Space for bottom nav */
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      background: var(--nav-bg);
+      color: var(--primary);
+      padding: 15px 20px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      flex-grow: 1;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 0;
+      margin-right: 10px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+
+    .info-section {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .info-section p {
+      margin: 5px 0;
+      font-size: 1.1em;
+    }
+    .info-section strong {
+      color: var(--primary);
+    }
+
+    .date-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .date-btn { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .date-btn.active { background: #0056b3; }
+    .category-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .category-tab { padding: 8px 16px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; background: var(--bg); color: var(--text); }
+    .category-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+
+    #mediaGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .media-item {
+      background: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    .media-item img, .media-item video {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+    }
+    .media-item .media-title {
+      padding: 10px;
+      font-size: 0.9em;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    #map { height: 400px; width: 100%; border-radius: 8px; margin-top: 20px; }
+
+    /* Overlay for media viewer */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    #overlay .media-viewer {
+      position: relative;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #overlay .media-viewer img, #overlay .media-viewer video {
+      max-width: 100%;
+      max-height: 80vh;
+      display: block;
+    }
+    #overlay .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ccc;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1.2em;
+      cursor: pointer;
+      line-height: 30px;
+      text-align: center;
+    }
+    #overlay .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 1.5em;
+    }
+    #overlay .nav-btn.left { left: 10px; }
+    #overlay .nav-btn.right { right: 10px; }
+
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--nav-bg);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+      z-index: 1000;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.8em;
+      padding: 5px;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+
+    .nav-item:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .nav-item i {
+      font-size: 1.5em;
+      margin-bottom: 3px;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i></button>
+    <h1 id="projectNameDisplay">Project Details</h1>
+    <label class="toggle-switch">
+      <input type="checkbox" onchange="toggleDark(this)">
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <div class="container">
+    <div class="info-section">
+      <p><strong>Location:</strong> <span id="projectLocationDisplay"></span></p>
+      <p><strong>Client:</strong> <span id="projectClientDisplay"></span></p>
+    </div>
+
+    <h3>Project Media</h3>
+    <div class="date-buttons" id="dateButtons">
+      </div>
+
+    <div class="category-tabs" id="categoryTabs">
+      </div>
+
+    <div id="mediaGrid">
+      </div>
+
+    <div id="map"></div>
+  </div>
+
+  <div id="overlay" onclick="closeOverlay(event)">
+    <div class="media-viewer">
+      <button class="close-btn" onclick="closeOverlay(event)">&times;</button>
+      <button class="nav-btn left" onclick="navigate(-1); event.stopPropagation();">⟨</button>
+      <div id="overlayContent"></div>
+      <button class="nav-btn right" onclick="navigate(1); event.stopPropagation();">⟩</button>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <i class="fas fa-home"></i>
+      Home
+    </a>
+    <a href="admin-panel.html" class="nav-item">
+      <i class="fas fa-user-shield"></i>
+      Admin
+    </a>
+  </nav>
+
+  <script>
+    // YOUR FIREBASE CONFIGURATION HERE
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let projectKey;
+    let selectedDate = null;
+    let selectedCategory = null;
+    let map;
+    let markers = [];
+    let mediaList = []; // Holds current media for overlay navigation
+    let currentIndex = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      applySavedTheme();
+      const params = new URLSearchParams(window.location.search);
+      projectKey = params.get('project');
+
+      if (!projectKey) {
+        document.getElementById('projectNameDisplay').textContent = "Project Not Found";
+        document.getElementById('projectLocationDisplay').textContent = "N/A";
+        document.getElementById('projectClientDisplay').textContent = "N/A";
+        document.getElementById('mediaGrid').innerHTML = "<p>No project selected to display.</p>";
+        return;
+      }
+
+      loadProjectDataAndMedia();
+      initializeMap();
+    });
+
+    async function loadProjectDataAndMedia() {
+      // Load main project details (name, location, client)
+      db.ref(`projects/${projectKey}`).on('value', (snapshot) => {
+        if (snapshot.exists()) {
+          const proj = snapshot.val();
+          document.getElementById('projectNameDisplay').textContent = proj.projectName || 'Project Details';
+          document.getElementById('projectLocationDisplay').textContent = proj.location || 'N/A';
+          document.getElementById('projectClientDisplay').textContent = proj.client || 'N/A';
+        } else {
+          document.getElementById('projectNameDisplay').textContent = 'Project Not Found';
+          document.getElementById('projectLocationDisplay').textContent = 'N/A';
+          document.getElementById('projectClientDisplay').textContent = 'N/A';
+        }
+      }, (error) => {
+          console.error("Firebase project details load error:", error);
+          document.getElementById('projectNameDisplay').textContent = 'Error Loading Project';
+      });
+
+      // Load media dates and categories
+      db.ref(`projectMedia/${projectKey}`).on('value', (snapshot) => {
+        const datesData = snapshot.val();
+        if (datesData) {
+          renderDateButtons(Object.keys(datesData).sort());
+          // Set initial date/category if available, otherwise just first date
+          if (!selectedDate) {
+              selectedDate = Object.keys(datesData).sort()[0];
+          }
+          if (selectedDate && datesData[selectedDate]) {
+              renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
+              if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
+                  selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
+              }
+          } else {
+              renderCategoryTabs([]); // No categories for selected date
+              selectedCategory = null;
+          }
+        } else {
+          renderDateButtons([]);
+          renderCategoryTabs([]);
+          selectedDate = null;
+          selectedCategory = null;
+        }
+        loadMedia(); // Load media after dates/categories are set
+      }, (error) => {
+          console.error("Firebase media dates/categories load error:", error);
+      });
+    }
+
+    function renderDateButtons(dates) {
+      const dateButtonsContainer = document.getElementById('dateButtons');
+      dateButtonsContainer.innerHTML = '';
+      if (dates.length === 0) {
+        dateButtonsContainer.innerHTML = '<p>No dates with media yet.</p>';
+        return;
+      }
+      dates.forEach(date => {
+        const button = document.createElement('button');
+        button.className = `date-btn ${date === selectedDate ? 'active' : ''}`;
+        button.textContent = date;
+        button.onclick = () => {
+          selectedDate = date;
+          selectedCategory = null; // Reset category when date changes
+          loadProjectDataAndMedia(); // Re-load to update categories and media
+        };
+        dateButtonsContainer.appendChild(button);
+      });
+    }
+
+    function renderCategoryTabs(categories) {
+        const categoryTabsContainer = document.getElementById('categoryTabs');
+        categoryTabsContainer.innerHTML = '';
+        if (categories.length === 0) {
+            categoryTabsContainer.innerHTML = '<p>No categories for this date yet.</p>';
+            return;
+        }
+        categories.forEach(category => {
+            const tab = document.createElement('div');
+            tab.className = `category-tab ${category === selectedCategory ? 'active' : ''}`;
+            tab.textContent = category;
+            tab.onclick = () => {
+                selectedCategory = category;
+                loadMedia(); // Only reload media for same date, new category
+            };
+            categoryTabsContainer.appendChild(tab);
+        });
+    }
+
+    function loadMedia() {
+        const mediaGrid = document.getElementById('mediaGrid');
+        mediaGrid.innerHTML = '<p>Loading media...</p>';
+        mediaList = []; // Clear for new data
+        clearMapMarkers();
+
+        if (!selectedDate || !selectedCategory) {
+            mediaGrid.innerHTML = '<p>Select a date and category to view media.</p>';
+            return;
+        }
+
+        const mediaRef = db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}`);
+
+        mediaRef.on('value', (snapshot) => {
+            mediaGrid.innerHTML = ''; // Clear existing media
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    const mediaKey = childSnapshot.key;
+                    const media = childSnapshot.val();
+                    mediaList.push({ key: mediaKey, ...media });
+
+                    const item = document.createElement('div');
+                    item.className = 'media-item';
+                    item.innerHTML = `
+                        ${media.type === 'video'
+                            ? `<video src="${media.url}" controls></video>`
+                            : `<img src="${media.url}" alt="${media.title}">`
+                        }
+                        <div class="media-title">${media.title || 'No Title'}</div>
+                    `;
+                    item.onclick = () => showOverlay(mediaList.findIndex(m => m.key === mediaKey));
+                    mediaGrid.appendChild(item);
+
+                    // Add marker to map
+                    if (media.lat && media.lon) {
+                        const marker = L.marker([media.lat, media.lon]).addTo(map)
+                            .bindPopup(`<b>${media.title || 'Media'}</b><br>${media.type === 'video' ? `<video width="150" controls><source src="${media.url}" type="video/mp4"></video>` : `<img src="${media.url}" width="150">`}`);
+                        markers.push(marker);
+                    }
+                });
+                document.getElementById('map').style.display = 'block'; // Show map if media exists
+            } else {
+                mediaGrid.innerHTML = '<p>No media found for this date and category.</p>';
+                document.getElementById('map').style.display = 'none'; // Hide map if no media
+            }
+        }, (error) => {
+            console.error("Firebase media load error:", error);
+            mediaGrid.innerHTML = `<p style='color:red'>Could not load media: ${error.message}</p>`;
+        });
+    }
+
+
+    function initializeMap() {
+      if (map) map.remove(); // Remove existing map if any
+      map = L.map('map').setView([18.5204, 73.8567], 13); // Default to Pune coordinates
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+    }
+
+    function clearMapMarkers() {
+      markers.forEach(marker => map.removeLayer(marker));
+      markers = [];
+    }
+
+    // Overlay functions
+    function showOverlay(index) {
+        if (mediaList.length === 0) return;
+        currentIndex = index;
+        const item = mediaList[currentIndex];
+        const overlayContent = document.getElementById('overlayContent');
+        overlayContent.innerHTML = item.type === 'video'
+            ? `<video src="${item.url}" controls autoplay loop></video>`
+            : `<img src="${item.url}" alt="${item.title}">`;
+        document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function navigate(dir) {
+      currentIndex = (currentIndex + dir + mediaList.length) % mediaList.length;
+      showOverlay(currentIndex);
+    }
+
+    function closeOverlay(e) {
+      if (e.target.id === 'overlay' || e.target.classList.contains('close-btn')) {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('overlayContent').innerHTML = ''; // Clear content
+      }
+    }
+
+    function toggleDark(input) {
+      const isDark = input.checked;
+      document.body.classList.toggle('dark', isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function applySavedTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      const isDark = savedTheme === 'dark';
+      document.body.classList.toggle('dark', isDark);
+      const toggle = document.querySelector('.toggle-switch input');
+      if (toggle) toggle.checked = isDark;
+    }
+  </script>
+</body>
+</html>
