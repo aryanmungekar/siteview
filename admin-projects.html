@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Project Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+    header { background: #007bff; color: white; padding: 20px; text-align: center; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    .project-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .project-header h2 { margin: 0; color: #007bff; }
+
+    .date-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .date-btn { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .date-btn.active { background: #0056b3; }
+    .category-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .category-tab { padding: 8px 16px; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; background: #eee; }
+    .category-tab.active { background: #007bff; color: white; border-color: #007bff; }
+
+    #mediaGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .media-item {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+      position: relative;
+    }
+    .media-item img, .media-item video {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      display: block;
+    }
+    .media-item .media-title {
+      padding: 10px;
+      font-size: 0.9em;
+      font-weight: bold;
+      color: #333;
+    }
+    .delete-media-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background-color: rgba(255, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 3px;
+        padding: 5px 8px;
+        font-size: 0.8em;
+        cursor: pointer;
+        z-index: 10;
+    }
+    .delete-media-btn:hover {
+        background-color: rgba(255, 0, 0, 0.9);
+    }
+
+    #map { height: 400px; width: 100%; border-radius: 8px; margin-top: 20px; display: none; /* Hidden by default */ }
+
+    /* Overlay for full media view */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    #overlay .media-viewer {
+      position: relative;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #overlay .media-viewer img, #overlay .media-viewer video {
+      max-width: 100%;
+      max-height: 80vh;
+      display: block;
+    }
+    #overlay .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ccc;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1.2em;
+      cursor: pointer;
+      line-height: 30px;
+      text-align: center;
+    }
+    #overlay .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 1.5em;
+    }
+    #overlay .nav-btn.left { left: 10px; }
+    #overlay .nav-btn.right { right: 10px; }
+
+    /* Add Media Form */
+    #formContainer {
+      display: none;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+    #formContainer input, #formContainer textarea {
+      width: calc(100% - 22px); /* Account for padding */
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #formContainer button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #formContainer button:hover { background: #0056b3; }
+    .add-media-btn {
+      padding: 10px 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .add-media-btn:hover { background: #218838; }
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="project-header container">
+      <h2 id="projectNameDisplay">Loading Project...</h2>
+      <button onclick="window.history.back()">Back to Admin Panel</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="date-buttons" id="dateButtons">
+      </div>
+
+    <div class="category-tabs" id="categoryTabs">
+      </div>
+
+    <button class="add-media-btn" onclick="openAddMediaForm()">Add New Media</button>
+
+    <div id="formContainer">
+      <h3>Add New Media Entry</h3>
+      <input type="text" id="mediaTitle" placeholder="Media Title">
+      <input type="text" id="mediaLat" placeholder="Latitude (optional)">
+      <input type="text" id="mediaLon" placeholder="Longitude (optional)">
+      <input type="file" id="mediaFile" accept="image/*,video/*"> <button onclick="uploadMediaAndSave()">Upload & Save Media</button>
+      <button onclick="document.getElementById('formContainer').style.display='none'">Cancel</button>
+      <p id="uploadStatus"></p>
+    </div>
+
+    <div id="mediaGrid">
+      </div>
+
+    <div id="map"></div>
+  </div>
+
+  <div id="overlay" onclick="closeOverlay(event)">
+    <div class="media-viewer">
+      <button class="close-btn" onclick="closeOverlay(event)">&times;</button>
+      <button class="nav-btn left" onclick="navigate(-1); event.stopPropagation();">⟨</button>
+      <div id="overlayContent"></div>
+      <button class="nav-btn right" onclick="navigate(1); event.stopPropagation();">⟩</button>
+    </div>
+  </div>
+
+  <script>
+    // YOUR FIREBASE CONFIGURATION HERE
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL", // Make sure this is present for Realtime Database
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // YOUR CLOUDINARY CONFIGURATION HERE
+    const CLOUDINARY_CLOUD_NAME = 'YOUR_CLOUDINARY_CLOUD_NAME';
+    const CLOUDINARY_UPLOAD_PRESET = 'YOUR_CLOUDINARY_UPLOAD_PRESET'; // e.g., 'unsigned_uploads'
+    const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
+
+    let projectKey;
+    let selectedDate = null;
+    let selectedCategory = null;
+    let map;
+    let markers = [];
+    let mediaList = []; // Holds current media for overlay navigation
+    let currentIndex = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      projectKey = params.get('project');
+
+      if (!projectKey) {
+        alert("No project selected. Redirecting to admin panel.");
+        window.location.href = "admin-panel.html";
+        return;
+      }
+
+      loadProjectDetails();
+      initializeMap();
+    });
+
+    async function loadProjectDetails() {
+      // Get project name for display
+      db.ref(`projects/${projectKey}`).once('value')
+        .then(snapshot => {
+          if (snapshot.exists()) {
+            document.getElementById('projectNameDisplay').textContent = snapshot.val().projectName || 'Project Details';
+          } else {
+            document.getElementById('projectNameDisplay').textContent = 'Project Not Found';
+          }
+        })
+        .catch(error => {
+          console.error("Error loading project name:", error);
+          document.getElementById('projectNameDisplay').textContent = 'Error Loading Project';
+        });
+
+      // Load media dates and categories
+      db.ref(`projectMedia/${projectKey}`).on('value', (snapshot) => {
+        const datesData = snapshot.val();
+        if (datesData) {
+          renderDateButtons(Object.keys(datesData).sort());
+          // Set initial date/category if available, otherwise just first date
+          if (!selectedDate) {
+              selectedDate = Object.keys(datesData).sort()[0];
+          }
+          if (selectedDate && datesData[selectedDate]) {
+              renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
+              if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
+                  selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
+              }
+          } else {
+              renderCategoryTabs([]); // No categories for selected date
+              selectedCategory = null;
+          }
+        } else {
+          renderDateButtons([]);
+          renderCategoryTabs([]);
+          selectedDate = null;
+          selectedCategory = null;
+        }
+        loadMedia(); // Load media after dates/categories are set
+      }, (error) => {
+          console.error("Firebase media dates/categories load error:", error);
+      });
+    }
+
+    function renderDateButtons(dates) {
+      const dateButtonsContainer = document.getElementById('dateButtons');
+      dateButtonsContainer.innerHTML = '';
+      if (dates.length === 0) {
+        dateButtonsContainer.innerHTML = '<p>No dates with media yet.</p>';
+        return;
+      }
+      dates.forEach(date => {
+        const button = document.createElement('button');
+        button.className = `date-btn ${date === selectedDate ? 'active' : ''}`;
+        button.textContent = date;
+        button.onclick = () => {
+          selectedDate = date;
+          selectedCategory = null; // Reset category when date changes
+          loadProjectDetails(); // Re-load to update categories and media
+        };
+        dateButtonsContainer.appendChild(button);
+      });
+    }
+
+    function renderCategoryTabs(categories) {
+        const categoryTabsContainer = document.getElementById('categoryTabs');
+        categoryTabsContainer.innerHTML = '';
+        if (categories.length === 0) {
+            categoryTabsContainer.innerHTML = '<p>No categories for this date yet.</p>';
+            return;
+        }
+        categories.forEach(category => {
+            const tab = document.createElement('div');
+            tab.className = `category-tab ${category === selectedCategory ? 'active' : ''}`;
+            tab.textContent = category;
+            tab.onclick = () => {
+                selectedCategory = category;
+                loadMedia(); // Only reload media for same date, new category
+            };
+            categoryTabsContainer.appendChild(tab);
+        });
+    }
+
+    function loadMedia() {
+        const mediaGrid = document.getElementById('mediaGrid');
+        mediaGrid.innerHTML = '<p>Loading media...</p>';
+        mediaList = []; // Clear for new data
+        clearMapMarkers();
+
+        if (!selectedDate || !selectedCategory) {
+            mediaGrid.innerHTML = '<p>Select a date and category to view media.</p>';
+            return;
+        }
+
+        // Path to media for the selected date and category
+        const mediaRef = db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}`);
+
+        mediaRef.on('value', (snapshot) => {
+            mediaGrid.innerHTML = ''; // Clear existing media
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    const mediaKey = childSnapshot.key;
+                    const media = childSnapshot.val();
+                    mediaList.push({ key: mediaKey, ...media }); // Store with key for deletion
+
+                    const item = document.createElement('div');
+                    item.className = 'media-item';
+                    item.innerHTML = `
+                        ${media.type === 'video'
+                            ? `<video src="${media.url}" controls></video>`
+                            : `<img src="${media.url}" alt="${media.title}">`
+                        }
+                        <div class="media-title">${media.title || 'No Title'}</div>
+                        <button class="delete-media-btn" data-key="${mediaKey}">Delete</button>
+                    `;
+                    item.onclick = () => showOverlay(mediaList.findIndex(m => m.key === mediaKey));
+                    mediaGrid.appendChild(item);
+
+                    // Add marker to map
+                    if (media.lat && media.lon) {
+                        const marker = L.marker([media.lat, media.lon]).addTo(map)
+                            .bindPopup(`<b>${media.title || 'Media'}</b><br>${media.type === 'video' ? `<video width="150" controls><source src="${media.url}" type="video/mp4"></video>` : `<img src="${media.url}" width="150">`}`);
+                        markers.push(marker);
+                    }
+                });
+                document.getElementById('map').style.display = 'block'; // Show map if media exists
+            } else {
+                mediaGrid.innerHTML = '<p>No media found for this date and category.</p>';
+                document.getElementById('map').style.display = 'none'; // Hide map if no media
+            }
+        }, (error) => {
+            console.error("Firebase media load error:", error);
+            mediaGrid.innerHTML = `<p style='color:red'>Could not load media: ${error.message}</p>`;
+        });
+    }
+
+    function initializeMap() {
+      if (map) map.remove(); // Remove existing map if any
+      map = L.map('map').setView([18.5204, 73.8567], 13); // Default to Pune coordinates
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+    }
+
+    function clearMapMarkers() {
+      markers.forEach(marker => map.removeLayer(marker));
+      markers = [];
+    }
+
+    async function uploadMediaAndSave() {
+      const title = document.getElementById('mediaTitle').value;
+      const lat = parseFloat(document.getElementById('mediaLat').value);
+      const lon = parseFloat(document.getElementById('mediaLon').value);
+      const fileInput = document.getElementById('mediaFile');
+      const file = fileInput.files[0];
+      const uploadStatus = document.getElementById('uploadStatus');
+
+      if (!file || !title || isNaN(lat) || isNaN(lon)) {
+        alert("Please fill in Title, Latitude, Longitude, and select a file.");
+        return;
+      }
+      if (!selectedDate || !selectedCategory) {
+        alert("Please select a Date and Category before adding media.");
+        return;
+      }
+
+      uploadStatus.textContent = 'Uploading...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+      try {
+        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+
+        if (data.secure_url) {
+          uploadStatus.textContent = 'Upload successful!';
+          const mediaType = data.resource_type; // 'image' or 'video'
+
+          const newMediaEntry = {
+            title: title,
+            lat: lat,
+            lon: lon,
+            url: data.secure_url,
+            type: mediaType // Store 'image' or 'video'
+          };
+
+          // Save media entry to Firebase
+          db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}`).push(newMediaEntry)
+            .then(() => {
+              alert("Media saved to Firebase successfully!");
+              document.getElementById('formContainer').style.display = 'none';
+              // Clear form
+              document.getElementById('mediaTitle').value = '';
+              document.getElementById('mediaLat').value = '';
+              document.getElementById('mediaLon').value = '';
+              fileInput.value = ''; // Clear file input
+              uploadStatus.textContent = '';
+              // loadMedia() will automatically refresh due to .on('value') listener
+            })
+            .catch(error => {
+              alert("Error saving media to Firebase: " + error.message);
+              console.error("Firebase save error:", error);
+              uploadStatus.textContent = 'Error saving to Firebase.';
+            });
+        } else {
+          throw new Error(data.error ? data.error.message : 'Unknown Cloudinary upload error');
+        }
+      } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        uploadStatus.textContent = `Upload failed: ${error.message}`;
+        alert(`Media upload failed: ${error.message}`);
+      }
+    }
+
+    function deleteMedia(mediaKey) {
+        if (!selectedDate || !selectedCategory) {
+            alert("Error: Date and Category not selected for deletion.");
+            return;
+        }
+        if (confirm("Are you sure you want to delete this media entry?")) {
+            db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}/${mediaKey}`).remove()
+                .then(() => {
+                    alert("Media deleted successfully!");
+                    // The .on('value') listener will automatically refresh the grid
+                })
+                .catch(error => {
+                    alert("Error deleting media: " + error.message);
+                    console.error("Firebase delete error:", error);
+                });
+        }
+    }
+
+    // Event delegation for delete buttons
+    document.getElementById('mediaGrid').addEventListener('click', function(event) {
+        if (event.target.classList.contains('delete-media-btn')) {
+            const mediaKey = event.target.dataset.key;
+            deleteMedia(mediaKey);
+        }
+    });
+
+    // Overlay functions
+    function showOverlay(index) {
+        if (mediaList.length === 0) return;
+        currentIndex = index;
+        const item = mediaList[currentIndex];
+        const overlayContent = document.getElementById('overlayContent');
+        overlayContent.innerHTML = item.type === 'video'
+            ? `<video src="${item.url}" controls autoplay loop></video>`
+            : `<img src="${item.url}" alt="${item.title}">`;
+        document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function navigate(dir) {
+      currentIndex = (currentIndex + dir + mediaList.length) % mediaList.length;
+      showOverlay(currentIndex);
+    }
+
+    function closeOverlay(e) {
+      if (e.target.id === 'overlay' || e.target.classList.contains('close-btn')) {
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('overlayContent').innerHTML = ''; // Clear content
+      }
+    }
+
+    function openAddMediaForm() {
+      document.getElementById('formContainer').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
