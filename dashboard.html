@@ -1,4 +1,4 @@
-it<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -217,6 +217,8 @@ it<!DOCTYPE html>
       <input type="file" id="thumbnailFile" accept="image/*" />
       <button onclick="submitProject()">Save</button>
       <button onclick="closeCreateModal()">Cancel</button>
+      <button id="deleteBtn" onclick="deleteProject()" style="background: crimson; color: white; display: none;">Delete</button>
+
     </div>
   </div>
 
@@ -229,6 +231,7 @@ it<!DOCTYPE html>
 
 
   <script>
+    
     let currentUser = null;
     auth.onAuthStateChanged(user => {
       if (!user) window.location.href = 'index.html';
@@ -278,6 +281,8 @@ it<!DOCTYPE html>
 
     function openCreateModal() {
       document.getElementById('createModal').style.display = 'flex';
+      document.getElementById('deleteBtn').style.display = editingKey ? 'block' : 'none';
+
     }
     function closeCreateModal() {
       document.getElementById('createModal').style.display = 'none';
@@ -285,6 +290,7 @@ it<!DOCTYPE html>
       document.getElementById('projectName').value = '';
       document.getElementById('projectLocation').value = '';
       document.getElementById('thumbnailFile').value = '';
+      document.getElementById('deleteBtn').style.display = 'none';
     }
 
     async function submitProject() {
@@ -346,6 +352,18 @@ it<!DOCTYPE html>
     }
 
     document.addEventListener('DOMContentLoaded', applySavedTheme);
+
+    function deleteProject() {
+  if (!editingKey) return;
+  const confirmDelete = confirm("Are you sure you want to delete this project?");
+  if (confirmDelete) {
+    db.ref("projects/" + editingKey).remove().then(() => {
+      closeCreateModal();
+      loadProjects();
+    });
+  }
+}
+
   </script>
 </body>
 </html>
