@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Projects - SiteView</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  
+
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -211,9 +211,49 @@
     .fab-upload:hover {
       background: #0056cc;
     }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .modal-content input, .modal-content button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+    }
+
+    #logoutBtn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: crimson;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
   <div style="display: flex; justify-content: space-between; padding: 20px; align-items: flex-end;">
     <h1>Your Projects</h1>
     <div class="toggle-container">
@@ -226,23 +266,25 @@
 
   <div id="projectGrid"></div>
 
-  <!-- Floating Upload Button -->
-  <button class="fab-upload" onclick="createNewProject()"><i class="fas fa-plus"></i></button>
+  <button class="fab-upload" onclick="openCreateModal()"><i class="fas fa-plus"></i></button>
 
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <a href="dashboard.html"><i class="fas fa-home"></i></a>
-    <a href="#"><i class="fas fa-comment-dots"></i></a>
-    <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i></a>
-  </nav>
+  <div class="modal" id="createModal" style="display:none">
+    <div class="modal-content">
+      <h3>Create New Project</h3>
+      <input type="text" id="projectName" placeholder="Project Name" />
+      <input type="text" id="projectLocation" placeholder="Location" />
+      <input type="file" id="thumbnailFile" accept="image/*" />
+      <button onclick="submitProject()">Create</button>
+      <button onclick="closeCreateModal()">Cancel</button>
+    </div>
+  </div>
 
   <script>
     let currentUser = null;
 
     auth.onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = 'index.html';
-      } else {
+      if (!user) window.location.href = 'index.html';
+      else {
         currentUser = user;
         loadProjects();
       }
@@ -259,7 +301,7 @@
             const card = document.createElement('div');
             card.className = 'project-card';
             card.onclick = () => {
-              const fileName = proj.file ? proj.file.replace('.json', '') : child.key;
+              const fileName = proj.file?.replace('.json', '') || child.key;
               window.location.href = `projects.html?project=${fileName}`;
             };
             card.innerHTML = `
@@ -270,38 +312,52 @@
             grid.appendChild(card);
           }
         });
-
-        if (grid.innerHTML.trim() === '') {
-          grid.innerHTML = '<p>No projects found. Click + to create one.</p>';
-        }
       });
     }
 
-    function createNewProject() {
-      const name = prompt("Enter Project Name:");
-      const location = prompt("Enter Location:");
-      const file = prompt("Enter project file name (e.g. 'ravet.json'):");
-      const thumbnail = prompt("Enter thumbnail image URL:");
+    function openCreateModal() {
+      document.getElementById('createModal').style.display = 'flex';
+    }
 
-      if (name && location && file) {
-        const newRef = db.ref('projects').push();
-        newRef.set({
-          projectName: name,
-          location: location,
-          file: file,
-          owner: currentUser.uid,
-          createdAt: new Date().toISOString(),
-          thumbnail: thumbnail || ""
-        }).then(() => {
-          loadProjects();
-        });
+    function closeCreateModal() {
+      document.getElementById('createModal').style.display = 'none';
+    }
+
+    async function submitProject() {
+      const name = document.getElementById('projectName').value;
+      const location = document.getElementById('projectLocation').value;
+      const fileInput = document.getElementById('thumbnailFile');
+
+      if (!name || !location || fileInput.files.length === 0) {
+        alert("Please fill all fields and upload a thumbnail.");
+        return;
       }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", cloudinaryConfig.uploadPreset);
+
+      const upload = await fetch(cloudinaryConfig.apiUrl, { method: "POST", body: formData });
+      const data = await upload.json();
+      const thumbnailUrl = data.secure_url;
+
+      const ref = db.ref("projects").push();
+      await ref.set({
+        projectName: name,
+        location: location,
+        file: name.replace(/\s+/g, '_').toLowerCase() + ".json",
+        thumbnail: thumbnailUrl,
+        owner: currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+
+      closeCreateModal();
+      loadProjects();
     }
 
     function logout() {
-      auth.signOut().then(() => {
-        window.location.href = 'index.html';
-      });
+      auth.signOut().then(() => window.location.href = 'index.html');
     }
 
     function toggleDark(input) {
