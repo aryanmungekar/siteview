@@ -21,6 +21,7 @@
       --nav-bg: #ffffff;
       --border: #ccc;
     }
+
     body.dark {
       --bg: #121212;
       --text: #eee;
@@ -29,6 +30,7 @@
       --nav-bg: #181818;
       --border: #333;
     }
+
     body {
       background: var(--bg);
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -37,6 +39,7 @@
       color: var(--text);
       transition: background 0.3s, color 0.3s;
     }
+
     h1 {
       text-align: center;
       color: var(--primary);
@@ -45,23 +48,27 @@
       letter-spacing: 1px;
       font-weight: 700;
     }
+
     .toggle-container {
       display: flex;
       justify-content: center;
       align-items: center;
       margin-bottom: 16px;
     }
+
     .toggle-switch {
       position: relative;
       display: inline-block;
       width: 52px;
       height: 28px;
     }
+
     .toggle-switch input {
       opacity: 0;
       width: 0;
       height: 0;
     }
+
     .slider {
       position: absolute;
       cursor: pointer;
@@ -73,6 +80,7 @@
       transition: 0.4s;
       border-radius: 28px;
     }
+
     .slider:before {
       position: absolute;
       content: "";
@@ -84,12 +92,15 @@
       transition: 0.4s;
       border-radius: 50%;
     }
+
     input:checked + .slider {
       background-color: #007bff;
     }
+
     input:checked + .slider:before {
       transform: translateX(24px);
     }
+
     #projectGrid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -98,6 +109,7 @@
       margin: 0 auto;
       padding: 0 18px 40px 18px;
     }
+
     .project-card {
       background: var(--card-bg);
       border-radius: 16px;
@@ -110,10 +122,12 @@
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       border: 1.5px solid var(--border);
     }
+
     .project-card:hover {
       transform: translateY(-5px);
       box-shadow: 0 12px 32px rgba(0, 123, 255, 0.2);
     }
+
     .project-thumb {
       width: 100%;
       max-width: 160px;
@@ -124,6 +138,7 @@
       margin-bottom: 16px;
       border: 1.5px solid #b3d8ff;
     }
+
     .project-title {
       font-size: 1.1em;
       font-weight: 600;
@@ -131,6 +146,7 @@
       margin-bottom: 4px;
       text-align: center;
     }
+
     .project-location {
       font-size: 0.95em;
       color: var(--primary);
@@ -138,12 +154,14 @@
       text-align: center;
       margin-bottom: 2px;
     }
+
     @media (max-width: 700px) {
       #projectGrid {
         grid-template-columns: repeat(2, 1fr);
         gap: 16px;
       }
     }
+
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -158,6 +176,7 @@
       box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.08);
       z-index: 999;
     }
+
     .bottom-nav a {
       flex: 1;
       text-align: center;
@@ -167,9 +186,11 @@
       padding: 10px 0;
       transition: transform 0.2s ease;
     }
+
     .bottom-nav a:hover {
       transform: scale(1.2);
     }
+
     .fab-upload {
       position: fixed;
       bottom: 75px;
@@ -186,13 +207,46 @@
       z-index: 1000;
       transition: background 0.3s ease;
     }
+
     .fab-upload:hover {
       background: #0056cc;
     }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; }
-    .modal-content { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
-    .modal-content input, .modal-content button { width: 100%; padding: 10px; margin: 8px 0; }
-    #logoutBtn { position: fixed; top: 16px; right: 16px; background: crimson; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; }
+
+    .modal {
+  position: fixed; 
+  top: 0; left: 0; 
+  width: 100%; height: 100%; 
+  background: rgba(0,0,0,0.5); 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  z-index: 10000;
+}
+.modal-content {
+  background: #fff; 
+  padding: 20px; 
+  border-radius: 10px; 
+  width: 90%; 
+  max-width: 400px;
+}
+.modal-content input,
+.modal-content button {
+  width: 100%; 
+  padding: 10px; 
+  margin: 8px 0;
+}
+#logoutBtn {
+  position: fixed; 
+  top: 16px; 
+  right: 16px; 
+  background: crimson; 
+  color: white; 
+  padding: 8px 16px; 
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer;
+}
+
   </style>
 </head>
 <body>
