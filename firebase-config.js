@@ -1,13 +1,14 @@
 // firebase-config.js
 // Firebase
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-  databaseURL: "YOUR_REALTIME_DB_URL",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_BUCKET.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA1czRjhbfYGqGsGFul49vvjaSZnARSkVE",
+  authDomain: "siteview-3bc59.firebaseapp.com",
+  databaseURL: "https://siteview-3bc59-default-rtdb.firebaseio.com",
+  projectId: "siteview-3bc59",
+  storageBucket: "siteview-3bc59.firebasestorage.app",
+  messagingSenderId: "941487179656",
+  appId: "1:941487179656:web:6d7c3eb02b61a0856a9c3d",
+  measurementId: "G-W9DN8D8HRM"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -17,6 +18,8 @@ const db = firebase.database();
 
 // Cloudinary
 const cloudinaryConfig = {
-  cloudName: "YOUR_CLOUD_NAME",
-  uploadPreset: "YOUR_UPLOAD_PRESET"
+  cloudName: "siteview_thumbnails",
+  uploadPreset: "https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload"
+
+
 };
