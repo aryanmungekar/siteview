@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+it<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -294,44 +294,60 @@
     }
 
     async function submitProject() {
-      const name = document.getElementById('projectName').value;
-      const location = document.getElementById('projectLocation').value;
-      const fileInput = document.getElementById('thumbnailFile');
-      const file = fileInput.files[0];
-      let thumbnailUrl = null;
+  const name = document.getElementById('projectName').value;
+  const location = document.getElementById('projectLocation').value;
+  const fileInput = document.getElementById('thumbnailFile');
+  const file = fileInput.files[0];
+  let thumbnailUrl = null;
 
-      if (!name || !location) {
-        alert("Project name and location are required.");
-        return;
-      }
+  if (!name || !location) {
+    alert("Project name and location are required.");
+    return;
+  }
 
-      if (file) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", cloudinaryConfig.uploadPreset);
-        const upload = await fetch(cloudinaryConfig.apiUrl, { method: "POST", body: formData });
-        const data = await upload.json();
-        thumbnailUrl = data.secure_url;
-      }
+  // If a thumbnail file is selected, upload it to Cloudinary
+  if (file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", cloudinaryConfig.uploadPreset);
 
-      const projectData = {
-        projectName: name,
-        location: location,
-        file: name.replace(/\s+/g, '_').toLowerCase() + ".json",
-        owner: currentUser.uid,
-        createdAt: new Date().toISOString()
-      };
-      if (thumbnailUrl) projectData.thumbnail = thumbnailUrl;
-
-      if (editingKey) {
-        await db.ref("projects/" + editingKey).update(projectData);
-      } else {
-        await db.ref("projects").push().set(projectData);
-      }
-
-      closeCreateModal();
-      loadProjects();
+    try {
+      const upload = await fetch(cloudinaryConfig.apiUrl, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await upload.json();
+      thumbnailUrl = data.secure_url;
+    } catch (error) {
+      alert("Thumbnail upload failed. Please try again or skip uploading an image.");
+      return;
     }
+  }
+
+  // Prepare project data
+  const projectData = {
+    projectName: name,
+    location: location,
+    file: name.replace(/\s+/g, '_').toLowerCase() + ".json",
+    owner: currentUser.uid,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (thumbnailUrl) {
+    projectData.thumbnail = thumbnailUrl;
+  }
+
+  // Create or update the project in Firebase
+  if (editingKey) {
+    await db.ref("projects/" + editingKey).update(projectData);
+  } else {
+    await db.ref("projects").push().set(projectData);
+  }
+
+  closeCreateModal();
+  loadProjects();
+}
+
 
     function logout() {
       auth.signOut().then(() => window.location.href = 'index.html');
