@@ -69,8 +69,8 @@
     <h2 id="formTitle">Sign In</h2>
     <input type="email" id="email" placeholder="Email"/>
     <input type="password" id="password" placeholder="Password"/>
-    <button onclick="handleAuth()">Sign In</button>
-    <div class="toggle-auth" onclick="toggleMode()">Don't have an account? Sign Up</div>
+    <button id="authButton">Sign In</button>
+    <div class="toggle-auth" id="toggleAuth">Don't have an account? Sign Up</div>
     <div class="error" id="errorBox"></div>
   </div>
 
@@ -79,24 +79,30 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
 
-  <!-- Your Firebase & Cloudinary Config -->
+  <!-- Firebase Config -->
   <script src="firebase-config.js"></script>
 
   <script>
     let isSignup = false;
 
-    function toggleMode() {
-      isSignup = !isSignup;
-      document.getElementById('formTitle').textContent = isSignup ? "Sign Up" : "Sign In";
-      document.querySelector('button').textContent = isSignup ? "Sign Up" : "Sign In";
-      document.querySelector('.toggle-auth').textContent = isSignup ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
-      document.getElementById('errorBox').textContent = '';
-    }
+    const formTitle = document.getElementById('formTitle');
+    const authButton = document.getElementById('authButton');
+    const toggleAuth = document.getElementById('toggleAuth');
+    const errorBox = document.getElementById('errorBox');
 
-    function handleAuth() {
+    toggleAuth.addEventListener('click', () => {
+      isSignup = !isSignup;
+      formTitle.textContent = isSignup ? "Sign Up" : "Sign In";
+      authButton.textContent = isSignup ? "Sign Up" : "Sign In";
+      toggleAuth.textContent = isSignup
+        ? "Already have an account? Sign In"
+        : "Don't have an account? Sign Up";
+      errorBox.textContent = '';
+    });
+
+    authButton.addEventListener('click', () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value.trim();
-      const errorBox = document.getElementById('errorBox');
 
       if (!email || !password) {
         errorBox.textContent = 'Please enter email and password.';
@@ -127,9 +133,10 @@
             errorBox.textContent = error.message;
           });
       }
-    }
+    });
   </script>
 </body>
 </html>
+
 
 
