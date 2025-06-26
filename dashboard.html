@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Projects - SiteView</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --text: #222;
+      --primary: #007bff;
+      --card-bg: #fff;
+      --nav-bg: #ffffff;
+      --border: #ccc;
+    }
+
+    body.dark {
+      --bg: #121212;
+      --text: #eee;
+      --primary: #64b5f6;
+      --card-bg: #1f1f1f;
+      --nav-bg: #181818;
+      --border: #333;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0 0 64px 0;
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--primary);
+      margin: 32px 0 12px;
+      font-size: 2.3rem;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+
+    .toggle-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 28px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #007bff;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    #projectGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 18px 40px 18px;
+    }
+
+    .project-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 12px 16px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 14px;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1.5px solid var(--border);
+    }
+
+    .project-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 32px rgba(0, 123, 255, 0.2);
+    }
+
+    .project-thumb {
+      width: 100%;
+      max-width: 160px;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 12px;
+      background: #e3f0ff;
+      margin-bottom: 16px;
+      border: 1.5px solid #b3d8ff;
+    }
+
+    .project-title {
+      font-size: 1.1em;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .project-location {
+      font-size: 0.95em;
+      color: var(--primary);
+      font-weight: 500;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+
+    @media (max-width: 700px) {
+      #projectGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--nav-bg);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.08);
+      z-index: 999;
+    }
+
+    .bottom-nav a {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      color: var(--primary);
+      font-size: 20px;
+      padding: 10px 0;
+      transition: transform 0.2s ease;
+    }
+
+    .bottom-nav a:hover {
+      transform: scale(1.2);
+    }
+
+    .fab-upload {
+      position: fixed;
+      bottom: 75px;
+      right: 18px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 28px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      z-index: 1000;
+      transition: background 0.3s ease;
+    }
+
+    .fab-upload:hover {
+      background: #0056cc;
+    }
+  </style>
+</head>
+<body>
+  <div style="display: flex; justify-content: space-between; padding: 20px; align-items: flex-end;">
+    <h1>Your Projects</h1>
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" onchange="toggleDark(this)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div id="projectGrid"></div>
+
+  <!-- Floating Upload Button -->
+  <button class="fab-upload" onclick="createNewProject()"><i class="fas fa-plus"></i></button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html"><i class="fas fa-home"></i></a>
+    <a href="#"><i class="fas fa-comment-dots"></i></a>
+    <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i></a>
+  </nav>
+
+  <script>
+    let currentUser = null;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'index.html';
+      } else {
+        currentUser = user;
+        loadProjects();
+      }
+    });
+
+    function loadProjects() {
+      const grid = document.getElementById('projectGrid');
+      grid.innerHTML = "<p>Loading...</p>";
+      db.ref('projects').once('value').then(snapshot => {
+        grid.innerHTML = '';
+        snapshot.forEach(child => {
+          const proj = child.val();
+          if (proj.owner === currentUser.uid) {
+            const card = document.createElement('div');
+            card.className = 'project-card';
+            card.onclick = () => {
+              const fileName = proj.file ? proj.file.replace('.json', '') : child.key;
+              window.location.href = `projects.html?project=${fileName}`;
+            };
+            card.innerHTML = `
+              <img class="project-thumb" src="${proj.thumbnail || 'https://via.placeholder.com/150'}" alt="${proj.projectName}">
+              <div class="project-title">${proj.projectName}</div>
+              <div class="project-location">${proj.location}</div>
+            `;
+            grid.appendChild(card);
+          }
+        });
+
+        if (grid.innerHTML.trim() === '') {
+          grid.innerHTML = '<p>No projects found. Click + to create one.</p>';
+        }
+      });
+    }
+
+    function createNewProject() {
+      const name = prompt("Enter Project Name:");
+      const location = prompt("Enter Location:");
+      const file = prompt("Enter project file name (e.g. 'ravet.json'):");
+      const thumbnail = prompt("Enter thumbnail image URL:");
+
+      if (name && location && file) {
+        const newRef = db.ref('projects').push();
+        newRef.set({
+          projectName: name,
+          location: location,
+          file: file,
+          owner: currentUser.uid,
+          createdAt: new Date().toISOString(),
+          thumbnail: thumbnail || ""
+        }).then(() => {
+          loadProjects();
+        });
+      }
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = 'index.html';
+      });
+    }
+
+    function toggleDark(input) {
+      const isDark = input.checked;
+      document.body.classList.toggle('dark', isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function applySavedTheme() {
+      const saved = localStorage.getItem('theme');
+      const dark = saved === 'dark';
+      document.body.classList.toggle('dark', dark);
+      const toggle = document.querySelector('.toggle-switch input');
+      if (toggle) toggle.checked = dark;
+    }
+
+    document.addEventListener('DOMContentLoaded', applySavedTheme);
+  </script>
+</body>
+</html>
