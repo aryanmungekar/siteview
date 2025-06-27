@@ -8,627 +8,143 @@
   <link rel="stylesheet" href="assets/style.css">
   <link rel="stylesheet" href="assets/transition.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- EXIF reader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="firebase-config.js"></script>
-
   <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    #logoutBtn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: crimson;
+      color: white;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 999;
+    }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+    .media-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+      padding: 10px;
+    }
+    .media-card img,
+    .media-card video {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .media-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .media-actions button {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #007bff;
+    }
+    .fab-upload {
+      position: fixed;
+      bottom: 80px;
+      right: 16px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #007bff;
+      color: white;
+      font-size: 28px;
+      border: none;
+      cursor: pointer;
+      z-index: 1000;
+    }
     .bottom-nav {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
       height: 60px;
-      background: var(--nav-bg, #fff);
+      background: white;
       display: flex;
       justify-content: space-around;
       align-items: center;
-      border-top: 1px solid var(--border, #ccc);
-      box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.08);
-      z-index: 999;
+      border-top: 1px solid #ccc;
     }
-
     .bottom-nav a {
-      flex: 1;
-      text-align: center;
+      font-size: 24px;
+      color: #007bff;
       text-decoration: none;
-      color: var(--primary, #007bff);
-      font-size: 20px;
-      padding: 10px 0;
-      transition: transform 0.2s ease;
     }
-
-    .bottom-nav a:hover {
-      transform: scale(1.2);
-    }
-
-    .fab-upload {
+    .modal {
       position: fixed;
-      bottom: 75px;
-      right: 18px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--primary, #007bff);
-      color: #fff;
-      font-size: 28px;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      z-index: 1000;
-      transition: background 0.3s ease;
+      top:0;left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.5);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:10000;
     }
-
-    .fab-upload:hover {
-      background: #0056cc;
+    .modal-content {
+      background:white;
+      padding:20px;
+      border-radius:10px;
+      width:90%;
+      max-width:400px;
     }
-
-    :root {
-      --primary: #007bff;
-      --primary-light: #e3f0ff;
-      --background: #f8fafc;
-      --card-bg: #fff;
-      --border-radius: 14px;
-      --shadow: 0 4px 24px rgba(0, 0, 0, 0.09);
-      --transition: 0.3s cubic-bezier(.4, 2, .6, 1);
+    .modal-content input,
+    .modal-content select,
+    .modal-content button {
+      width:100%;
+      padding:10px;
+      margin:8px 0;
     }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: var(--background);
-      min-height: 100vh;
-      color: #222;
+    #loadingOverlay {
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.4);
+      z-index:10001;
+      display:none;
+      justify-content:center;
+      align-items:center;
+      color:white;
+      font-size:1.5em;
+      font-weight:bold;
     }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0 0 40px 0;
-    }
-
-    h1 {
-      margin: 32px 0 10px 0;
-      font-size: 2.2rem;
-      color: var(--primary);
-      letter-spacing: 1px;
-      font-weight: 700;
-      text-shadow: 0 2px 8px #b3d8ff44;
-    }
-
-    /* Top section: project info + slider side by side */
-    .top-section {
-      display: flex;
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto 24px auto;
-      gap: 32px;
-      align-items: stretch;
-      box-sizing: border-box;
-    }
-
-    .project-info {
-      flex: 0 0 30%;
-      max-width: 25%;
-      min-width: 180px;
-      background: var(--card-bg);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      padding: 12px 14px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 16px;
-      box-sizing: border-box;
-      min-height: unset;
-    }
-
-    .project-thumb {
-      width: 56px;
-      height: 56px;
-      object-fit: cover;
-      border-radius: 10px;
-      background: #e3f0ff;
-      border: 1.5px solid #b3d8ff;
-      box-shadow: 0 2px 8px #007bff11;
-      margin-bottom: 0;
-    }
-
-    .project-info>div {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .project-title {
-      font-size: 1.05em;
-      font-weight: 600;
-      color: #007bff;
-      margin-bottom: 0;
-      text-align: left;
-    }
-
-    .project-location {
-      font-size: 0.98em;
-      color: #555;
-      margin-bottom: 0;
-      text-align: left;
-    }
-
-    .project-file {
-      font-size: 0.92em;
-      color: #888;
-      text-align: left;
-    }
-
-    .slider-section {
-      flex: 0 0 70%;
-      max-width: 75%;
-      min-width: 220px;
-      background: var(--card-bg);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      padding: 12px 18px 10px 18px;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 4px;
-      box-sizing: border-box;
-    }
-
-    .slider-label {
-      font-size: 1.15em;
-      color: var(--primary);
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .slider-row {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      width: 100%;
-    }
-
-    #dateSlider {
-      flex: 1 1 0;
-      width: 100%;
-      height: 28px;
-      accent-color: var(--primary);
-      border-radius: 8px;
-      background: linear-gradient(90deg, var(--primary-light) 0%, #b3d8ff 100%);
-      box-shadow: 0 2px 8px rgba(0, 123, 255, 0.08);
-      transition: box-shadow var(--transition);
-    }
-
-    #sliderDateLabel {
-      font-size: 1.1em;
-      color: #222;
-      font-weight: 500;
-      background: var(--primary-light);
-      padding: 6px 16px;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-      min-width: 110px;
-      text-align: center;
-      margin-left: 10px;
-    }
-
-    #sliderDates {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      font-size: 13px;
-      color: var(--primary);
-      margin-top: 8px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      text-shadow: 0 1px 2px #fff;
-      padding: 0 2px;
-    }
-
-    /* Category Buttons */
-    #categoryButtons {
-      margin: 16px 0 18px 0;
-      display: flex;
-      gap: 18px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    #categoryButtons button {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 22px;
-      font-size: 1em;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 2px 8px #007bff22;
-      transition: background var(--transition), transform var(--transition);
-    }
-
-    #categoryButtons button:hover {
-      background: #0056b3;
-      transform: translateY(-2px) scale(1.04);
-    }
-
-    /* Image Grid */
-    #imageRow {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 22px;
-      width: 100%;
-      max-width: 1200px;
-      margin-bottom: 24px;
-      padding: 0 12px;
-    }
-
-    #imageRow img {
-      width: 95%;
-      height: 225px;
-      object-fit: cover;
-      cursor: pointer;
-      border: 2px solid transparent;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
-      background: #f3f7fa;
-    }
-
-    #imageRow img:hover {
-      border-color: var(--primary);
-      box-shadow: 0 8px 32px #007bff33;
-      transform: scale(1.025);
-    }
-
-    /* Map Popup */
-    #mapPopup {
-      position: fixed;
-      top: 65%;
-      left: 2%;
-      width: 300px;
-      height: 200px;
-      background: var(--card-bg);
-      border: 2px solid var(--primary);
-      border-radius: var(--border-radius);
-      box-shadow: 0 0 18px rgba(0, 0, 0, 0.18);
-      z-index: 5100;
-      display: none;
-      flex-direction: column;
-      resize: both;
-      overflow: hidden;
-      min-width: 220px;
-      min-height: 180px;
-      max-width: 98vw;
-      max-height: 80vh;
-      transition: box-shadow var(--transition);
-    }
-
-    #mapHeader {
-      background-color: var(--primary);
-      color: white;
-      padding: 0px;
-      cursor: move;
-      border-top-left-radius: var(--border-radius);
-      border-top-right-radius: var(--border-radius);
-      user-select: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 1.1em;
-      font-weight: 600;
-    }
-
-    #closeBtn {
-      background: transparent;
-      border: none;
-      color: white;
-      font-size: 22px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: color var(--transition);
-    }
-
-    #closeBtn:hover {
-      color: #ffd700;
-    }
-
-    #map {
-      flex-grow: 1;
-      min-height: 120px;
-    }
-
-    /* Photo Popup */
-    #photoPopup {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.96);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      z-index: 2000;
-      pointer-events: none;
-      padding: 0 10px;
-    }
-
-    #photoPopup img,
-    #popupTitle,
-    .popupControls,
-    #navButtons {
-      pointer-events: auto;
-    }
-
-    #popupImg {
-      height: 60vh;
-      max-width: 96vw;
-      max-height: 80vh;
-      border-radius: var(--border-radius);
-      box-shadow: 0 8px 32px #0008;
-      background: #fff;
-      margin-bottom: 18px;
-    }
-
-    #popupTitle {
-      color: white;
-      font-size: 1.3em;
-      margin: 10px 0 18px 0;
-      font-weight: 600;
-      text-align: center;
-      text-shadow: 0 2px 8px #000a;
-    }
-
-    .popupControls {
-      position: absolute;
-      top: 18px;
-      right: 24px;
-      z-index: 10;
-    }
-
-    .popupControls button {
-      background: #fff;
-      border: none;
-      font-size: 28px;
-      margin-left: 10px;
-      cursor: pointer;
-      border-radius: 8px;
-      padding: 6px 14px;
-      box-shadow: 0 2px 8px #0002;
-      transition: background var(--transition), color var(--transition);
-    }
-
-    .popupControls button:hover {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    #navButtons {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 45vh;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100vw;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 32px;
-      z-index: 5;
-    }
-
-    #navButtons button {
-      background: #fff;
-      border: none;
-      font-size: 2.2em;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      font-weight: bold;
-      color: #007bff;
-      box-shadow: 0 4px 16px #007bff22;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
-      margin: 0 18px;
-    }
-
-    #navButtons button:hover {
-      background: #007bff;
-      color: #fff;
-      transform: scale(1.12);
-      box-shadow: 0 8px 32px #007bff44;
-    }
-
-    /* 360 Viewer Fullscreen Overlay */
-    #viewer360 {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90vw;
-      height: 90vh;
-      background-color: rgba(0, 0, 0, 0.97);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-radius: var(--border-radius);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 4000;
-      display: none;
-      overflow: hidden;
-      min-width: 240px;
-      min-height: 180px;
-      max-width: 100vw;
-      max-height: 100vh;
-      transition: box-shadow var(--transition);
-    }
-
-    #close360Btn {
-      position: absolute;
-      top: 14px;
-      right: 22px;
-      font-size: 32px;
-      font-weight: bold;
-      color: white;
-      background: rgba(0, 0, 0, 0.7);
-      border: none;
-      padding: 6px 16px;
-      cursor: pointer;
-      z-index: 4100;
-      border-radius: 8px;
-      transition: background var(--transition), color var(--transition);
-    }
-
-    #close360Btn:hover {
-      background: #fff;
-      color: var(--primary);
-    }
-
-    #pano {
-      width: 100%;
-      height: 100%;
-      border-radius: var(--border-radius);
-      background: #222;
-    }
-
-    /* Date Button Row */
-    .date-button-row {
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding: 8px 0 8px 0;
-      scrollbar-width: thin;
-      scrollbar-color: #007bff #e3f0ff;
-    }
-
-    .date-btn {
-      flex: 0 0 auto;
-      padding: 10px 22px;
-      font-size: 1em;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      background: #e3f0ff;
-      color: #007bff;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-      box-shadow: 0 2px 8px #007bff11;
-    }
-
-    .date-btn.selected,
-    .date-btn:active {
-      background: #007bff;
-      color: #fff;
-      box-shadow: 0 4px 16px #007bff33;
-    }
-
-    .date-btn:hover {
-      background: #b3d8ff;
-      color: #0056b3;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 900px) {
-      .top-section {
-        flex-direction: column;
-        gap: 18px;
-        max-width: 98vw;
-      }
-
-      .project-info,
-      .slider-section {
-        max-width: 100%;
-        width: 100%;
-        min-width: 0;
-      }
-    }
-
-    @media (max-width: 600px) {
-      .slider-section {
-        padding: 14px 4vw 10px 4vw;
-      }
-
-      #imageRow {
-        grid-template-columns: repeat(2, 1fr);
-        /* 2 items per row */
-        gap: 5px;
-        padding: 0 2vw;
-        max-width: 95%;
-        padding-bottom: 75px;
-      }
-
-      #imageRow img {
-        aspect-ratio: 4 / 3;
-        /* Consistent and clean */
-        height: auto;
-        max-width: 100%;
-      }
-
-      #popupImg {
-        height: 38vh;
-        max-width: 98vw;
-      }
-
-      #navButtons {
-        padding: 0 6vw;
-      }
-
-      #mapPopup {
-        width: 98vw;
-        min-width: 120px;
-        height: 180px;
-      }
-
-      #viewer360 {
-        width: 100vw;
-        height: 60vh;
-      }
-    }
-    .modal { position: fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000; }
-    .modal-content { background:#fff;padding:20px;border-radius:10px;width:90%;max-width:400px; }
-    .modal-content input, .modal-content select, .modal-content button { width:100%;padding:10px;margin:8px 0; }
-    #logoutBtn { position:fixed;top:16px;right:16px;background:crimson;color:#fff;padding:8px 16px;border:none;border-radius:8px;cursor:pointer; }
-    .media-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;padding:20px; }
-    .media-card { background:var(--card-bg);border-radius:12px;box-shadow:0 6px 10px rgba(0,0,0,0.1);padding:10px;position:relative; }
-    .media-card img, .media-card video { width:100%;height:120px;object-fit:cover;border-radius:8px; }
-    .media-actions { display:flex;justify-content:space-around;margin-top:8px; }
-    .media-actions button { background:none;border:none;color:var(--primary);cursor:pointer;font-size:18px; }
   </style>
 </head>
 <body>
-  <button id="logoutBtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
-  <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:20px;">
-    <h1 id="projectTitle">Project</h1>
-    <label class="toggle-switch">
-      <input type="checkbox" onchange="toggleDark(this)">
-      <span class="slider"></span>
-    </label>
-  </header>
-
-  <div id="emptyMessage" style="text-align:center;margin-top:40px;display:none;color:#666;font-size:1.2em;">
-    No media found. Tap + to add.
-  </div>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
+  <h2 style="text-align:center;padding-top:16px;" id="projectTitle">Project</h2>
+  <div id="loadingOverlay">Uploading...</div>
+  <div id="emptyMessage" style="text-align:center;margin-top:40px;display:none;color:#555;">No media found. Tap + to add.</div>
   <div id="mediaGrid" class="media-grid"></div>
-
   <button class="fab-upload" onclick="openMediaModal()"><i class="fas fa-plus"></i></button>
 
+  <!-- Media Upload Modal -->
   <div id="mediaModal" class="modal" style="display:none">
     <div class="modal-content">
       <h3 id="modalTitle">Add Media</h3>
@@ -651,185 +167,195 @@
     <a href="#" onclick="openMediaModal()"><i class="fas fa-upload"></i></a>
     <a href="#"><i class="fas fa-user-circle"></i></a>
   </div>
+<script src="assets/transition.js"></script>
+<script>
+  let currentUser, projectKey, mediaData = { images: {}, panoramic: {}, video: {} }, editingMedia = null;
 
-  <script src="assets/transition.js"></script>
-  <script>
-    let currentUser, projectKey, projectData = {}, mediaData = {images:{},panoramic:{},video:{}}, editingMedia = null;
+  auth.onAuthStateChanged(u => {
+    if (!u) return location.href = 'index.html';
+    currentUser = u;
+    const params = new URLSearchParams(location.search);
+    projectKey = params.get('project');
+    loadProject();
+  });
 
-    auth.onAuthStateChanged(u => {
-      if (!u) return window.location.href='index.html';
-      currentUser = u;
-      const params = new URLSearchParams(location.search);
-      projectKey = params.get('project');
-      loadProject();
-      applySavedTheme();
+  function loadProject() {
+    db.ref('projects/' + projectKey).once('value').then(snap => {
+      const project = snap.val();
+      if (!project) return alert('Project not found');
+      document.getElementById('projectTitle').textContent = project.projectName;
     });
 
-    function loadProject() {
-      db.ref('projects/'+projectKey).once('value').then(snap => {
-        const proj = snap.val();
-        if (!proj) return alert('Project not found');
-        document.getElementById('projectTitle').textContent = proj.projectName;
-      });
-      db.ref('data/'+projectKey).once('value').then(snap=>{
-        projectData = snap.val() || {};
-        Object.assign(mediaData, projectData);
-        renderMedia();
-      });
-    }
-
-    function renderMedia() {
-      const grid = document.getElementById('mediaGrid');
-      grid.innerHTML = '';
-      let count = 0;
-      ['images','panoramic','video'].forEach(cat=>{
-        const items = mediaData[cat]||{};
-        Object.entries(items).forEach(([k,item])=>{
-          count++;
-          const card = createMediaItem(item,cat,k);
-          grid.appendChild(card);
-        });
-      });
-      document.getElementById('emptyMessage').style.display = count? 'none':'block';
-    }
-
-    function createMediaItem(item,cat,k) {
-      const card = document.createElement('div');
-      card.className='media-card';
-      let mediaHtml = cat==='video'
-        ? `<video src="${item.url}" controls></video>`
-        : `<img src="${item.url}" />`;
-      card.innerHTML = mediaHtml + `<h4>${item.title}</h4><p>${item.date || ''}</p>`;
-      const actions = document.createElement('div'); actions.className='media-actions';
-      actions.innerHTML = `
-        <button onclick="editMedia('${cat}','${k}')"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteMedia('${cat}','${k}')"><i class="fas fa-trash-alt"></i></button>
-        ${(item.lat && item.lon)? `<button onclick="previewMap(${item.lat},${item.lon},'${item.title}')"><i class="fas fa-map-marker-alt"></i></button>` : ''}
-      `;
-      card.appendChild(actions);
-      return card;
-    }
-
-    function openMediaModal() {
-      editingMedia = null;
-      document.getElementById('modalTitle').textContent = 'Add Media';
-      resetModal();
-      document.getElementById('mediaModal').style.display='flex';
-    }
-    function closeMediaModal() {
-      document.getElementById('mediaModal').style.display='none';
-    }
-    function resetModal() {
-      document.getElementById('mediaFile').value='';
-      document.getElementById('mediaTitle').value='';
-      document.getElementById('mediaCategory').value='images';
-      document.getElementById('customDateToggle').checked=false;
-      document.getElementById('customDateInput').style.display='none';
-      document.getElementById('customDateInput').value='';
-    }
-
-    function editMedia(cat,key) {
-      editingMedia={cat,key};
-      const item=mediaData[cat][key];
-      document.getElementById('modalTitle').textContent='Edit Media';
-      document.getElementById('mediaTitle').value = item.title;
-      document.getElementById('mediaCategory').value=cat;
-      if(item.date){
-        document.getElementById('customDateToggle').checked=true;
-        document.getElementById('customDateInput').style.display='block';
-        document.getElementById('customDateInput').value=item.date;
-      }
-      document.getElementById('mediaModal').style.display='flex';
-    }
-
-    function deleteMedia(cat,k){
-      if(!confirm('Delete media?')) return;
-      delete mediaData[cat][k];
-      saveMediaToFirebase();
+    db.ref('data/' + projectKey).once('value').then(snap => {
+      mediaData = snap.val() || { images: {}, panoramic: {}, video: {} };
       renderMedia();
-    }
+    });
+  }
 
-    function submitMedia(){
-      const fileField = document.getElementById('mediaFile');
-      const title = document.getElementById('mediaTitle').value.trim();
-      const cat = document.getElementById('mediaCategory').value;
-      const useCustom = document.getElementById('customDateToggle').checked;
-      const customDate = document.getElementById('customDateInput').value;
+  function renderMedia() {
+    const grid = document.getElementById('mediaGrid');
+    grid.innerHTML = '';
+    let count = 0;
+    ['images', 'panoramic', 'video'].forEach(cat => {
+      const items = mediaData[cat] || {};
+      Object.entries(items).forEach(([k, item]) => {
+        count++;
+        grid.appendChild(createMediaCard(item, cat, k));
+      });
+    });
+    document.getElementById('emptyMessage').style.display = count ? 'none' : 'block';
+  }
 
-      if(!title || (!fileField.files.length && !editingMedia)) return alert('Provide title and file.');
+  function createMediaCard(item, cat, key) {
+    const div = document.createElement('div');
+    div.className = 'media-card';
+    div.innerHTML = (cat === 'video'
+      ? `<video src="${item.url}" controls></video>`
+      : `<img src="${item.url}" />`) +
+      `<h4>${item.title}</h4><p>${item.date || ''}</p>`;
 
-      const key = editingMedia? editingMedia.key: db.ref().push().key;
-      let uploadPromise;
+    const actions = document.createElement('div');
+    actions.className = 'media-actions';
+    actions.innerHTML = `
+      <button onclick="editMedia('${cat}','${key}')"><i class="fas fa-edit"></i></button>
+      <button onclick="deleteMedia('${cat}','${key}')"><i class="fas fa-trash-alt"></i></button>
+      ${item.lat && item.lon ? `<button onclick="previewMap(${item.lat}, ${item.lon}, '${item.title}')"><i class="fas fa-map-marker-alt"></i></button>` : ''}
+    `;
+    div.appendChild(actions);
+    return div;
+  }
 
-      if(fileField.files.length){
-        const f = fileField.files[0];
-        const cd = cloudinaryConfig;
-        const fd=new FormData();
-        fd.append('file',f);
-        fd.append('upload_preset',cd.uploadPreset);
-        uploadPromise = fetch(cd.apiUrl,{method:'POST',body:fd})
-          .then(res=>res.json())
-          .then(j=>j.secure_url);
-      } else {
-        uploadPromise = Promise.resolve(mediaData[cat][key].url);
-      }
+  function openMediaModal() {
+    editingMedia = null;
+    document.getElementById('modalTitle').textContent = 'Add Media';
+    document.getElementById('mediaFile').value = '';
+    document.getElementById('mediaTitle').value = '';
+    document.getElementById('mediaCategory').value = 'images';
+    document.getElementById('customDateToggle').checked = false;
+    document.getElementById('customDateInput').style.display = 'none';
+    document.getElementById('customDateInput').value = '';
+    document.getElementById('mediaModal').style.display = 'flex';
+  }
 
-      uploadPromise.then(url=>{
-        if(editingMedia && mediaData[cat] && mediaData[cat][key]){
-          delete mediaData[editingMedia.cat][editingMedia.key];
-        }
-        const item = { title, url };
-        // Date handling
-        if(useCustom && customDate) item.date=customDate;
-        else if(fileField.files.length && fileField.files[0].type.startsWith('image/')){
-          EXIF.getData(fileField.files[0], function(){
-            const dt = EXIF.getTag(this,'DateTimeOriginal');
-            const gpsLat = EXIF.getTag(this,'GPSLatitude');
-            const gpsLon = EXIF.getTag(this,'GPSLongitude');
-            if(dt) item.date = dt.split(' ')[0].replace(/:/g,'-');
-            if(gpsLat && gpsLon){
-              item.lat = gpsLat[0] + gpsLat[1]/60 + gpsLat[2]/3600;
-              item.lon = gpsLon[0] + gpsLon[1]/60 + gpsLon[2]/3600;
-            }
-            finalizeItem();
-          });
-          return;
-        }
-        if(useCustom && customDate) ; else item.date = new Date().toISOString().split('T')[0];
-        finalizeItem();
+  function closeMediaModal() {
+    document.getElementById('mediaModal').style.display = 'none';
+  }
 
-        function finalizeItem(){
-          mediaData[cat] = mediaData[cat]||{};
-          mediaData[cat][key]=item;
-          saveMediaToFirebase();
+  document.getElementById('customDateToggle').addEventListener('change', (e) => {
+    document.getElementById('customDateInput').style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  function editMedia(cat, key) {
+    editingMedia = { cat, key };
+    const item = mediaData[cat][key];
+    document.getElementById('modalTitle').textContent = 'Edit Media';
+    document.getElementById('mediaTitle').value = item.title;
+    document.getElementById('mediaCategory').value = cat;
+    document.getElementById('customDateToggle').checked = !!item.date;
+    document.getElementById('customDateInput').style.display = item.date ? 'block' : 'none';
+    document.getElementById('customDateInput').value = item.date || '';
+    document.getElementById('mediaModal').style.display = 'flex';
+  }
+
+  function deleteMedia(cat, key) {
+    if (!confirm('Delete this media?')) return;
+    delete mediaData[cat][key];
+    db.ref('data/' + projectKey).set(mediaData).then(renderMedia);
+  }
+
+  function showLoader(show) {
+    document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+  }
+
+  function submitMedia() {
+    const fileField = document.getElementById('mediaFile');
+    const title = document.getElementById('mediaTitle').value.trim();
+    const category = document.getElementById('mediaCategory').value;
+    const useCustom = document.getElementById('customDateToggle').checked;
+    const customDate = document.getElementById('customDateInput').value;
+
+    if (!title || (!fileField.files.length && !editingMedia)) return alert('Provide title and file.');
+
+    const file = fileField.files[0];
+    const key = editingMedia ? editingMedia.key : db.ref().push().key;
+
+    showLoader(true);
+
+    const uploadFile = editingMedia && !file ? Promise.resolve(mediaData[category][key].url)
+      : uploadToCloudinary(file);
+
+    uploadFile.then(url => {
+      const item = { title, url };
+      const finish = () => {
+        mediaData[category] = mediaData[category] || {};
+        mediaData[category][key] = item;
+        db.ref('data/' + projectKey).set(mediaData).then(() => {
+          showLoader(false);
           closeMediaModal();
           renderMedia();
-        }
-      });
-    }
+        });
+      };
 
-    function saveMediaToFirebase(){
-      db.ref('data/'+projectKey).set(mediaData);
-    }
+      if (useCustom && customDate) {
+        item.date = customDate;
+        return finish();
+      }
 
-    function previewMap(lat,lon,title){
-      const mm=document.createElement('div');mm.className='modal';mm.style.zIndex=10001;
-      mm.innerHTML=`<div class="modal-content" style="max-width:600px;">
+      if (file?.type.startsWith('image/')) {
+        EXIF.getData(file, function () {
+          const dt = EXIF.getTag(this, 'DateTimeOriginal');
+          const gpsLat = EXIF.getTag(this, 'GPSLatitude');
+          const gpsLon = EXIF.getTag(this, 'GPSLongitude');
+          if (dt) item.date = dt.split(' ')[0].replace(/:/g, '-');
+          if (gpsLat && gpsLon) {
+            item.lat = gpsLat[0] + gpsLat[1] / 60 + gpsLat[2] / 3600;
+            item.lon = gpsLon[0] + gpsLon[1] / 60 + gpsLon[2] / 3600;
+          }
+          finish();
+        });
+      } else {
+        item.date = new Date().toISOString().split('T')[0];
+        finish();
+      }
+    }).catch(err => {
+      showLoader(false);
+      alert('Upload failed: ' + err.message);
+    });
+  }
+
+  function uploadToCloudinary(file) {
+    const cd = cloudinaryConfig; // cloudinaryConfig must be defined in your `firebase-config.js` or another included file
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', cd.uploadPreset);
+    return fetch(cd.apiUrl, { method: 'POST', body: fd })
+      .then(res => res.json())
+      .then(data => data.secure_url);
+  }
+
+  function previewMap(lat, lon, title) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.zIndex = 10001;
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width:600px;">
         <h3>${title}</h3>
         <div id="leafletMap" style="height:300px;border-radius:8px;"></div>
         <button onclick="this.closest('.modal').remove()">Close</button>
       </div>`;
-      document.body.appendChild(mm);
-      setTimeout(()=>{
-        const map=L.map('leafletMap').setView([lat,lon],16);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM contributors'}).addTo(map);
-        L.marker([lat,lon]).addTo(map).bindPopup(title).openPopup();
-      },10);
-    }
+    document.body.appendChild(modal);
+    setTimeout(() => {
+      const map = L.map('leafletMap').setView([lat, lon], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      L.marker([lat, lon]).addTo(map).bindPopup(title).openPopup();
+    }, 50);
+  }
 
-    function logout(){ auth.signOut().then(_=>location.href='index.html'); }
-    function toggleDark(i){ document.body.classList.toggle('dark',i.checked); localStorage.setItem('theme',i.checked?'dark':'light'); }
-    function applySavedTheme(){ const d = localStorage.getItem('theme')==='dark'; document.body.classList.toggle('dark',d); document.querySelector('.toggle-switch input').checked=d; }
-  </script>
+  function logout() {
+    auth.signOut().then(() => location.href = 'index.html');
+  }
+</script>
 </body>
 </html>
