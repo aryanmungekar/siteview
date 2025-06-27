@@ -1,0 +1,30 @@
+body {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+body.slide-in-right {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+body.slide-in-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+body.animate-in {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+body.slide-out-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+body.slide-out-right {
+  transform: translateX(100%);
+  opacity: 0;
+}
