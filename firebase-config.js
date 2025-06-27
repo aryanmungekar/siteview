@@ -19,7 +19,7 @@ const db = firebase.database();
 
 // ✅ Cloudinary
 const cloudinaryConfig = {
-  cloudName: "siteview_thumbnails",
-  uploadPreset: "your_unsigned_upload_preset", // set this correctly
+  cloudName: "dvkcrzdhs",
+  uploadPreset: "siteview_thumbnails", // set this correctly
   apiUrl: "https://api.cloudinary.com/v1_1/siteview_thumbnails/auto/upload"
 };
