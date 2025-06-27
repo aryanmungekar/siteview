@@ -1,584 +1,835 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Project Details</title>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Font Awesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <!-- Pannellum CSS & JS (for 360 images if still used - remains uncommented for your reference) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css" />
-  <script src="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Project Media - SiteView</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/transition.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <!-- EXIF reader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="firebase-config.js"></script>
 
   <style>
-    :root {
-      --bg: #f8fafc;
-      --text: #222;
-      --primary: #007bff;
-      --card-bg: #fff;
-      --nav-bg: #ffffff;
-      --border: #ccc;
-    }
-
-    body.dark {
-      --bg: #121212;
-      --text: #eee;
-      --primary: #64b5f6;
-      --card-bg: #1f1f1f;
-      --nav-bg: #181818;
-      --border: #333;
-    }
-
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      margin: 0;
-      padding-bottom: 60px; /* Space for bottom nav */
-      background: var(--bg);
-      color: var(--text);
-      transition: background 0.3s, color 0.3s;
-    }
-
-    header {
-      background: var(--nav-bg);
-      color: var(--primary);
-      padding: 15px 20px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 24px;
-      flex-grow: 1;
-    }
-    .back-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 1.5em;
-      cursor: pointer;
-      padding: 0;
-      margin-right: 10px;
-    }
-    .toggle-switch { /* Copied from index.html */
-      position: relative;
-      display: inline-block;
-      width: 45px;
-      height: 25px;
-    }
-
-    .toggle-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: .4s;
-      border-radius: 25px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 19px;
-      width: 19px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider {
-      background-color: #007bff;
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(20px);
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: 20px auto;
-      padding: 0 20px;
-    }
-
-    .info-section {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    .info-section p {
-      margin: 5px 0;
-      font-size: 1.1em;
-    }
-    .info-section strong {
-      color: var(--primary);
-    }
-
-    .date-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .date-btn { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    .date-btn.active { background: #0056b3; }
-    .category-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .category-tab { padding: 8px 16px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; background: var(--bg); color: var(--text); }
-    .category-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-    #mediaGrid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
-    }
-    .media-item {
-      background: var(--card-bg);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      cursor: pointer;
-    }
-    .media-item img, .media-item video {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
-      display: block;
-    }
-    .media-item .media-title {
-      padding: 10px;
-      font-size: 0.9em;
-      font-weight: bold;
-      color: var(--text);
-    }
-
-    #map { height: 400px; width: 100%; border-radius: 8px; margin-top: 20px; }
-
-    /* Overlay for media viewer */
-    #overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-    }
-    #overlay .media-viewer {
-      position: relative;
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 8px;
-      max-width: 90%;
-      max-height: 90%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    #overlay .media-viewer img, #overlay .media-viewer video {
-      max-width: 100%;
-      max-height: 80vh;
-      display: block;
-    }
-    #overlay .close-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #ccc;
-      border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      font-size: 1.2em;
-      cursor: pointer;
-      line-height: 30px;
-      text-align: center;
-    }
-    #overlay .nav-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(0,0,0,0.5);
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      cursor: pointer;
-      font-size: 1.5em;
-    }
-    #overlay .nav-btn.left { left: 10px; }
-    #overlay .nav-btn.right { right: 10px; }
-
-
     .bottom-nav {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
       height: 60px;
-      background: var(--nav-bg);
+      background: var(--nav-bg, #fff);
       display: flex;
       justify-content: space-around;
       align-items: center;
-      border-top: 1px solid var(--border);
-      box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
-      z-index: 1000;
+      border-top: 1px solid var(--border, #ccc);
+      box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.08);
+      z-index: 999;
     }
 
-    .nav-item {
+    .bottom-nav a {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      color: var(--primary, #007bff);
+      font-size: 20px;
+      padding: 10px 0;
+      transition: transform 0.2s ease;
+    }
+
+    .bottom-nav a:hover {
+      transform: scale(1.2);
+    }
+
+    .fab-upload {
+      position: fixed;
+      bottom: 75px;
+      right: 18px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary, #007bff);
+      color: #fff;
+      font-size: 28px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      z-index: 1000;
+      transition: background 0.3s ease;
+    }
+
+    .fab-upload:hover {
+      background: #0056cc;
+    }
+
+    :root {
+      --primary: #007bff;
+      --primary-light: #e3f0ff;
+      --background: #f8fafc;
+      --card-bg: #fff;
+      --border-radius: 14px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.09);
+      --transition: 0.3s cubic-bezier(.4, 2, .6, 1);
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--background);
+      min-height: 100vh;
+      color: #222;
+    }
+
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      color: var(--text);
-      text-decoration: none;
-      font-size: 0.8em;
-      padding: 5px;
-      border-radius: 5px;
-      transition: background 0.3s;
+      padding: 0 0 40px 0;
     }
 
-    .nav-item:hover {
-      background: rgba(0,0,0,0.05);
+    h1 {
+      margin: 32px 0 10px 0;
+      font-size: 2.2rem;
+      color: var(--primary);
+      letter-spacing: 1px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px #b3d8ff44;
     }
 
-    .nav-item i {
-      font-size: 1.5em;
-      margin-bottom: 3px;
+    /* Top section: project info + slider side by side */
+    .top-section {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto 24px auto;
+      gap: 32px;
+      align-items: stretch;
+      box-sizing: border-box;
+    }
+
+    .project-info {
+      flex: 0 0 30%;
+      max-width: 25%;
+      min-width: 180px;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      box-sizing: border-box;
+      min-height: unset;
+    }
+
+    .project-thumb {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 10px;
+      background: #e3f0ff;
+      border: 1.5px solid #b3d8ff;
+      box-shadow: 0 2px 8px #007bff11;
+      margin-bottom: 0;
+    }
+
+    .project-info>div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .project-title {
+      font-size: 1.05em;
+      font-weight: 600;
+      color: #007bff;
+      margin-bottom: 0;
+      text-align: left;
+    }
+
+    .project-location {
+      font-size: 0.98em;
+      color: #555;
+      margin-bottom: 0;
+      text-align: left;
+    }
+
+    .project-file {
+      font-size: 0.92em;
+      color: #888;
+      text-align: left;
+    }
+
+    .slider-section {
+      flex: 0 0 70%;
+      max-width: 75%;
+      min-width: 220px;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 12px 18px 10px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+      box-sizing: border-box;
+    }
+
+    .slider-label {
+      font-size: 1.15em;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      width: 100%;
+    }
+
+    #dateSlider {
+      flex: 1 1 0;
+      width: 100%;
+      height: 28px;
+      accent-color: var(--primary);
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--primary-light) 0%, #b3d8ff 100%);
+      box-shadow: 0 2px 8px rgba(0, 123, 255, 0.08);
+      transition: box-shadow var(--transition);
+    }
+
+    #sliderDateLabel {
+      font-size: 1.1em;
+      color: #222;
+      font-weight: 500;
+      background: var(--primary-light);
+      padding: 6px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      min-width: 110px;
+      text-align: center;
+      margin-left: 10px;
+    }
+
+    #sliderDates {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 13px;
+      color: var(--primary);
+      margin-top: 8px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 2px #fff;
+      padding: 0 2px;
+    }
+
+    /* Category Buttons */
+    #categoryButtons {
+      margin: 16px 0 18px 0;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #categoryButtons button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #007bff22;
+      transition: background var(--transition), transform var(--transition);
+    }
+
+    #categoryButtons button:hover {
+      background: #0056b3;
+      transform: translateY(-2px) scale(1.04);
+    }
+
+    /* Image Grid */
+    #imageRow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 24px;
+      padding: 0 12px;
+    }
+
+    #imageRow img {
+      width: 95%;
+      height: 225px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+      background: #f3f7fa;
+    }
+
+    #imageRow img:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 32px #007bff33;
+      transform: scale(1.025);
+    }
+
+    /* Map Popup */
+    #mapPopup {
+      position: fixed;
+      top: 65%;
+      left: 2%;
+      width: 300px;
+      height: 200px;
+      background: var(--card-bg);
+      border: 2px solid var(--primary);
+      border-radius: var(--border-radius);
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.18);
+      z-index: 5100;
+      display: none;
+      flex-direction: column;
+      resize: both;
+      overflow: hidden;
+      min-width: 220px;
+      min-height: 180px;
+      max-width: 98vw;
+      max-height: 80vh;
+      transition: box-shadow var(--transition);
+    }
+
+    #mapHeader {
+      background-color: var(--primary);
+      color: white;
+      padding: 0px;
+      cursor: move;
+      border-top-left-radius: var(--border-radius);
+      border-top-right-radius: var(--border-radius);
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+
+    #closeBtn {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color var(--transition);
+    }
+
+    #closeBtn:hover {
+      color: #ffd700;
+    }
+
+    #map {
+      flex-grow: 1;
+      min-height: 120px;
+    }
+
+    /* Photo Popup */
+    #photoPopup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.96);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 2000;
+      pointer-events: none;
+      padding: 0 10px;
+    }
+
+    #photoPopup img,
+    #popupTitle,
+    .popupControls,
+    #navButtons {
+      pointer-events: auto;
+    }
+
+    #popupImg {
+      height: 60vh;
+      max-width: 96vw;
+      max-height: 80vh;
+      border-radius: var(--border-radius);
+      box-shadow: 0 8px 32px #0008;
+      background: #fff;
+      margin-bottom: 18px;
+    }
+
+    #popupTitle {
+      color: white;
+      font-size: 1.3em;
+      margin: 10px 0 18px 0;
+      font-weight: 600;
+      text-align: center;
+      text-shadow: 0 2px 8px #000a;
+    }
+
+    .popupControls {
+      position: absolute;
+      top: 18px;
+      right: 24px;
+      z-index: 10;
+    }
+
+    .popupControls button {
+      background: #fff;
+      border: none;
+      font-size: 28px;
+      margin-left: 10px;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 6px 14px;
+      box-shadow: 0 2px 8px #0002;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .popupControls button:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    #navButtons {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 45vh;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100vw;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px;
+      z-index: 5;
+    }
+
+    #navButtons button {
+      background: #fff;
+      border: none;
+      font-size: 2.2em;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      font-weight: bold;
+      color: #007bff;
+      box-shadow: 0 4px 16px #007bff22;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+      margin: 0 18px;
+    }
+
+    #navButtons button:hover {
+      background: #007bff;
+      color: #fff;
+      transform: scale(1.12);
+      box-shadow: 0 8px 32px #007bff44;
+    }
+
+    /* 360 Viewer Fullscreen Overlay */
+    #viewer360 {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vw;
+      height: 90vh;
+      background-color: rgba(0, 0, 0, 0.97);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--border-radius);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 4000;
+      display: none;
+      overflow: hidden;
+      min-width: 240px;
+      min-height: 180px;
+      max-width: 100vw;
+      max-height: 100vh;
+      transition: box-shadow var(--transition);
+    }
+
+    #close360Btn {
+      position: absolute;
+      top: 14px;
+      right: 22px;
+      font-size: 32px;
+      font-weight: bold;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      border: none;
+      padding: 6px 16px;
+      cursor: pointer;
+      z-index: 4100;
+      border-radius: 8px;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    #close360Btn:hover {
+      background: #fff;
       color: var(--primary);
     }
+
+    #pano {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--border-radius);
+      background: #222;
+    }
+
+    /* Date Button Row */
+    .date-button-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding: 8px 0 8px 0;
+      scrollbar-width: thin;
+      scrollbar-color: #007bff #e3f0ff;
+    }
+
+    .date-btn {
+      flex: 0 0 auto;
+      padding: 10px 22px;
+      font-size: 1em;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background: #e3f0ff;
+      color: #007bff;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 8px #007bff11;
+    }
+
+    .date-btn.selected,
+    .date-btn:active {
+      background: #007bff;
+      color: #fff;
+      box-shadow: 0 4px 16px #007bff33;
+    }
+
+    .date-btn:hover {
+      background: #b3d8ff;
+      color: #0056b3;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 900px) {
+      .top-section {
+        flex-direction: column;
+        gap: 18px;
+        max-width: 98vw;
+      }
+
+      .project-info,
+      .slider-section {
+        max-width: 100%;
+        width: 100%;
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .slider-section {
+        padding: 14px 4vw 10px 4vw;
+      }
+
+      #imageRow {
+        grid-template-columns: repeat(2, 1fr);
+        /* 2 items per row */
+        gap: 5px;
+        padding: 0 2vw;
+        max-width: 95%;
+        padding-bottom: 75px;
+      }
+
+      #imageRow img {
+        aspect-ratio: 4 / 3;
+        /* Consistent and clean */
+        height: auto;
+        max-width: 100%;
+      }
+
+      #popupImg {
+        height: 38vh;
+        max-width: 98vw;
+      }
+
+      #navButtons {
+        padding: 0 6vw;
+      }
+
+      #mapPopup {
+        width: 98vw;
+        min-width: 120px;
+        height: 180px;
+      }
+
+      #viewer360 {
+        width: 100vw;
+        height: 60vh;
+      }
+    }
+    .modal { position: fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000; }
+    .modal-content { background:#fff;padding:20px;border-radius:10px;width:90%;max-width:400px; }
+    .modal-content input, .modal-content select, .modal-content button { width:100%;padding:10px;margin:8px 0; }
+    #logoutBtn { position:fixed;top:16px;right:16px;background:crimson;color:#fff;padding:8px 16px;border:none;border-radius:8px;cursor:pointer; }
+    .media-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;padding:20px; }
+    .media-card { background:var(--card-bg);border-radius:12px;box-shadow:0 6px 10px rgba(0,0,0,0.1);padding:10px;position:relative; }
+    .media-card img, .media-card video { width:100%;height:120px;object-fit:cover;border-radius:8px; }
+    .media-actions { display:flex;justify-content:space-around;margin-top:8px; }
+    .media-actions button { background:none;border:none;color:var(--primary);cursor:pointer;font-size:18px; }
   </style>
 </head>
 <body>
-  <header>
-    <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i></button>
-    <h1 id="projectNameDisplay">Project Details</h1>
+  <button id="logoutBtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+  <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:20px;">
+    <h1 id="projectTitle">Project</h1>
     <label class="toggle-switch">
       <input type="checkbox" onchange="toggleDark(this)">
       <span class="slider"></span>
     </label>
   </header>
 
-  <div class="container">
-    <div class="info-section">
-      <p><strong>Location:</strong> <span id="projectLocationDisplay"></span></p>
-      <p><strong>Client:</strong> <span id="projectClientDisplay"></span></p>
-    </div>
-
-    <h3>Project Media</h3>
-    <div class="date-buttons" id="dateButtons">
-      <!-- Date buttons will be loaded here -->
-    </div>
-
-    <div class="category-tabs" id="categoryTabs">
-      <!-- Category tabs will be loaded here -->
-    </div>
-
-    <div id="mediaGrid">
-      <!-- Media items will be loaded here -->
-    </div>
-
-    <div id="map"></div>
+  <div id="emptyMessage" style="text-align:center;margin-top:40px;display:none;color:#666;font-size:1.2em;">
+    No media found. Tap + to add.
   </div>
+  <div id="mediaGrid" class="media-grid"></div>
 
-  <!-- Overlay for full media view -->
-  <div id="overlay" onclick="closeOverlay(event)">
-    <div class="media-viewer">
-      <button class="close-btn" onclick="closeOverlay(event)">&times;</button>
-      <button class="nav-btn left" onclick="navigate(-1); event.stopPropagation();">⟨</button>
-      <div id="overlayContent"></div>
-      <button class="nav-btn right" onclick="navigate(1); event.stopPropagation();">⟩</button>
+  <button class="fab-upload" onclick="openMediaModal()"><i class="fas fa-plus"></i></button>
+
+  <div id="mediaModal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3 id="modalTitle">Add Media</h3>
+      <input type="file" id="mediaFile" accept="image/*,video/*"/>
+      <input type="text" id="mediaTitle" placeholder="Title"/>
+      <select id="mediaCategory">
+        <option value="images">Image</option>
+        <option value="panoramic">Panoramic</option>
+        <option value="video">Video</option>
+      </select>
+      <label><input type="checkbox" id="customDateToggle"/> Choose Date</label>
+      <input type="date" id="customDateInput" style="display:none"/>
+      <button onclick="submitMedia()">Save</button>
+      <button onclick="closeMediaModal()">Cancel</button>
     </div>
   </div>
 
-  <nav class="bottom-nav">
-    <a href="index.html" class="nav-item">
-      <i class="fas fa-home"></i>
-      Projects
-    </a>
-    <a href="admin-panel.html" class="nav-item">
-      <i class="fas fa-plus-circle"></i>
-      Add Project
-    </a>
-  </nav>
+  <div class="bottom-nav">
+    <a href="dashboard.html"><i class="fas fa-home"></i></a>
+    <a href="#" onclick="openMediaModal()"><i class="fas fa-upload"></i></a>
+    <a href="#"><i class="fas fa-user-circle"></i></a>
+  </div>
 
+  <script src="assets/transition.js"></script>
   <script>
-    // YOUR FIREBASE CONFIGURATION HERE
-    const firebaseConfig = {
-  apiKey: "AIzaSyA1czRjhbfYGqGsGFul49vvjaSZnARSkVE",
-  authDomain: "siteview-3bc59.firebaseapp.com",
-  databaseURL: "https://siteview-3bc59-default-rtdb.firebaseio.com",
-  projectId: "siteview-3bc59",
-  storageBucket: "siteview-3bc59.firebasestorage.app",
-  messagingSenderId: "941487179656",
-  appId: "1:941487179656:web:6d7c3eb02b61a0856a9c3d",
-  measurementId: "G-W9DN8D8HRM"
-};
+    let currentUser, projectKey, projectData = {}, mediaData = {images:{},panoramic:{},video:{}}, editingMedia = null;
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+    auth.onAuthStateChanged(u => {
+      if (!u) return window.location.href='index.html';
+      currentUser = u;
+      const params = new URLSearchParams(location.search);
+      projectKey = params.get('project');
+      loadProject();
+      applySavedTheme();
+    });
 
-    let projectKey;
-    let selectedDate = null;
-    let selectedCategory = null;
-    let map;
-    let markers = [];
-    let mediaList = []; // Holds current media for overlay navigation
-    let currentUserUid = null;
+    function loadProject() {
+      db.ref('projects/'+projectKey).once('value').then(snap => {
+        const proj = snap.val();
+        if (!proj) return alert('Project not found');
+        document.getElementById('projectTitle').textContent = proj.projectName;
+      });
+      db.ref('data/'+projectKey).once('value').then(snap=>{
+        projectData = snap.val() || {};
+        Object.assign(mediaData, projectData);
+        renderMedia();
+      });
+    }
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUserUid = user.uid;
-        const params = new URLSearchParams(window.location.search);
-        projectKey = params.get('project');
+    function renderMedia() {
+      const grid = document.getElementById('mediaGrid');
+      grid.innerHTML = '';
+      let count = 0;
+      ['images','panoramic','video'].forEach(cat=>{
+        const items = mediaData[cat]||{};
+        Object.entries(items).forEach(([k,item])=>{
+          count++;
+          const card = createMediaItem(item,cat,k);
+          grid.appendChild(card);
+        });
+      });
+      document.getElementById('emptyMessage').style.display = count? 'none':'block';
+    }
 
-        if (!projectKey) {
-          alert("No project selected. Redirecting to projects list.");
-          window.location.href = "index.html";
+    function createMediaItem(item,cat,k) {
+      const card = document.createElement('div');
+      card.className='media-card';
+      let mediaHtml = cat==='video'
+        ? `<video src="${item.url}" controls></video>`
+        : `<img src="${item.url}" />`;
+      card.innerHTML = mediaHtml + `<h4>${item.title}</h4><p>${item.date || ''}</p>`;
+      const actions = document.createElement('div'); actions.className='media-actions';
+      actions.innerHTML = `
+        <button onclick="editMedia('${cat}','${k}')"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteMedia('${cat}','${k}')"><i class="fas fa-trash-alt"></i></button>
+        ${(item.lat && item.lon)? `<button onclick="previewMap(${item.lat},${item.lon},'${item.title}')"><i class="fas fa-map-marker-alt"></i></button>` : ''}
+      `;
+      card.appendChild(actions);
+      return card;
+    }
+
+    function openMediaModal() {
+      editingMedia = null;
+      document.getElementById('modalTitle').textContent = 'Add Media';
+      resetModal();
+      document.getElementById('mediaModal').style.display='flex';
+    }
+    function closeMediaModal() {
+      document.getElementById('mediaModal').style.display='none';
+    }
+    function resetModal() {
+      document.getElementById('mediaFile').value='';
+      document.getElementById('mediaTitle').value='';
+      document.getElementById('mediaCategory').value='images';
+      document.getElementById('customDateToggle').checked=false;
+      document.getElementById('customDateInput').style.display='none';
+      document.getElementById('customDateInput').value='';
+    }
+
+    function editMedia(cat,key) {
+      editingMedia={cat,key};
+      const item=mediaData[cat][key];
+      document.getElementById('modalTitle').textContent='Edit Media';
+      document.getElementById('mediaTitle').value = item.title;
+      document.getElementById('mediaCategory').value=cat;
+      if(item.date){
+        document.getElementById('customDateToggle').checked=true;
+        document.getElementById('customDateInput').style.display='block';
+        document.getElementById('customDateInput').value=item.date;
+      }
+      document.getElementById('mediaModal').style.display='flex';
+    }
+
+    function deleteMedia(cat,k){
+      if(!confirm('Delete media?')) return;
+      delete mediaData[cat][k];
+      saveMediaToFirebase();
+      renderMedia();
+    }
+
+    function submitMedia(){
+      const fileField = document.getElementById('mediaFile');
+      const title = document.getElementById('mediaTitle').value.trim();
+      const cat = document.getElementById('mediaCategory').value;
+      const useCustom = document.getElementById('customDateToggle').checked;
+      const customDate = document.getElementById('customDateInput').value;
+
+      if(!title || (!fileField.files.length && !editingMedia)) return alert('Provide title and file.');
+
+      const key = editingMedia? editingMedia.key: db.ref().push().key;
+      let uploadPromise;
+
+      if(fileField.files.length){
+        const f = fileField.files[0];
+        const cd = cloudinaryConfig;
+        const fd=new FormData();
+        fd.append('file',f);
+        fd.append('upload_preset',cd.uploadPreset);
+        uploadPromise = fetch(cd.apiUrl,{method:'POST',body:fd})
+          .then(res=>res.json())
+          .then(j=>j.secure_url);
+      } else {
+        uploadPromise = Promise.resolve(mediaData[cat][key].url);
+      }
+
+      uploadPromise.then(url=>{
+        if(editingMedia && mediaData[cat] && mediaData[cat][key]){
+          delete mediaData[editingMedia.cat][editingMedia.key];
+        }
+        const item = { title, url };
+        // Date handling
+        if(useCustom && customDate) item.date=customDate;
+        else if(fileField.files.length && fileField.files[0].type.startsWith('image/')){
+          EXIF.getData(fileField.files[0], function(){
+            const dt = EXIF.getTag(this,'DateTimeOriginal');
+            const gpsLat = EXIF.getTag(this,'GPSLatitude');
+            const gpsLon = EXIF.getTag(this,'GPSLongitude');
+            if(dt) item.date = dt.split(' ')[0].replace(/:/g,'-');
+            if(gpsLat && gpsLon){
+              item.lat = gpsLat[0] + gpsLat[1]/60 + gpsLat[2]/3600;
+              item.lon = gpsLon[0] + gpsLon[1]/60 + gpsLon[2]/3600;
+            }
+            finalizeItem();
+          });
           return;
         }
-        loadProjectDataAndMedia(currentUserUid); // Pass UID to check ownership
-        initializeMap();
-      } else {
-        alert("You are not logged in. Redirecting to login page.");
-        window.location.href = 'login.html';
-      }
-    });
+        if(useCustom && customDate) ; else item.date = new Date().toISOString().split('T')[0];
+        finalizeItem();
 
-    document.addEventListener("DOMContentLoaded", () => {
-      applySavedTheme();
-      // DOMContentLoaded is handled by onAuthStateChanged now for data loading
-    });
-
-    async function loadProjectDataAndMedia(userId) {
-      // Load main project details (name, location, client) and check ownership
-      db.ref(`projects/${projectKey}`).on('value', (snapshot) => {
-        if (snapshot.exists()) {
-          const proj = snapshot.val();
-          if (proj.ownerId === userId) { // Crucial ownership check
-            document.getElementById('projectNameDisplay').textContent = proj.projectName || 'Project Details';
-            document.getElementById('projectLocationDisplay').textContent = proj.location || 'N/A';
-            document.getElementById('projectClientDisplay').textContent = proj.client || 'N/A';
-            // Only proceed to load media if ownership is confirmed
-            loadMediaForProject();
-          } else {
-            alert("You do not have permission to view this project. Redirecting to your projects.");
-            window.location.href = "index.html"; // Redirect if not owner
-          }
-        } else {
-          document.getElementById('projectNameDisplay').textContent = 'Project Not Found';
-          document.getElementById('projectLocationDisplay').textContent = 'N/A';
-          document.getElementById('projectClientDisplay').textContent = 'N/A';
-          alert("Project not found. Redirecting to your projects.");
-          window.location.href = "index.html"; // Redirect if project doesn't exist
+        function finalizeItem(){
+          mediaData[cat] = mediaData[cat]||{};
+          mediaData[cat][key]=item;
+          saveMediaToFirebase();
+          closeMediaModal();
+          renderMedia();
         }
-      }, (error) => {
-          console.error("Firebase project details load error:", error);
-          document.getElementById('projectNameDisplay').textContent = 'Error Loading Project';
-          alert("Error loading project details. Redirecting.");
-          window.location.href = "index.html";
       });
     }
 
-    function loadMediaForProject() {
-        // Load media dates and categories
-        db.ref(`projectMedia/${projectKey}`).on('value', (snapshot) => {
-            const datesData = snapshot.val();
-            if (datesData) {
-              renderDateButtons(Object.keys(datesData).sort());
-              if (!selectedDate) {
-                  selectedDate = Object.keys(datesData).sort()[0];
-              }
-              if (selectedDate && datesData[selectedDate]) {
-                  renderCategoryTabs(Object.keys(datesData[selectedDate]).sort());
-                  if (!selectedCategory && Object.keys(datesData[selectedDate]).length > 0) {
-                      selectedCategory = Object.keys(datesData[selectedDate]).sort()[0];
-                  }
-              } else {
-                  renderCategoryTabs([]);
-                  selectedCategory = null;
-              }
-            } else {
-              renderDateButtons([]);
-              renderCategoryTabs([]);
-              selectedDate = null;
-              selectedCategory = null;
-            }
-            loadMedia();
-        }, (error) => {
-            console.error("Firebase media dates/categories load error:", error);
-        });
+    function saveMediaToFirebase(){
+      db.ref('data/'+projectKey).set(mediaData);
     }
 
-
-    function renderDateButtons(dates) {
-      const dateButtonsContainer = document.getElementById('dateButtons');
-      dateButtonsContainer.innerHTML = '';
-      if (dates.length === 0) {
-        dateButtonsContainer.innerHTML = '<p>No dates with media yet.</p>';
-        return;
-      }
-      dates.forEach(date => {
-        const button = document.createElement('button');
-        button.className = `date-btn ${date === selectedDate ? 'active' : ''}`;
-        button.textContent = date;
-        button.onclick = () => {
-          selectedDate = date;
-          selectedCategory = null; // Reset category when date changes
-          loadMedia(); // Only reload media for same date, new category
-        };
-        dateButtonsContainer.appendChild(button);
-      });
+    function previewMap(lat,lon,title){
+      const mm=document.createElement('div');mm.className='modal';mm.style.zIndex=10001;
+      mm.innerHTML=`<div class="modal-content" style="max-width:600px;">
+        <h3>${title}</h3>
+        <div id="leafletMap" style="height:300px;border-radius:8px;"></div>
+        <button onclick="this.closest('.modal').remove()">Close</button>
+      </div>`;
+      document.body.appendChild(mm);
+      setTimeout(()=>{
+        const map=L.map('leafletMap').setView([lat,lon],16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM contributors'}).addTo(map);
+        L.marker([lat,lon]).addTo(map).bindPopup(title).openPopup();
+      },10);
     }
 
-    function renderCategoryTabs(categories) {
-        const categoryTabsContainer = document.getElementById('categoryTabs');
-        categoryTabsContainer.innerHTML = '';
-        if (categories.length === 0) {
-            categoryTabsContainer.innerHTML = '<p>No categories for this date yet.</p>';
-            return;
-        }
-        categories.forEach(category => {
-            const tab = document.createElement('div');
-            tab.className = `category-tab ${category === selectedCategory ? 'active' : ''}`;
-            tab.textContent = category;
-            tab.onclick = () => {
-                selectedCategory = category;
-                loadMedia(); // Only reload media for same date, new category
-            };
-            categoryTabsContainer.appendChild(tab);
-        });
-    }
-
-    function loadMedia() {
-        const mediaGrid = document.getElementById('mediaGrid');
-        mediaGrid.innerHTML = '<p>Loading media...</p>';
-        mediaList = []; // Clear for new data
-        clearMapMarkers();
-
-        if (!selectedDate || !selectedCategory) {
-            mediaGrid.innerHTML = '<p>Select a date and category to view media.</p>';
-            return;
-        }
-
-        const mediaRef = db.ref(`projectMedia/${projectKey}/${selectedDate}/${selectedCategory}`);
-
-        mediaRef.on('value', (snapshot) => {
-            mediaGrid.innerHTML = ''; // Clear existing media
-            if (snapshot.exists()) {
-                snapshot.forEach((childSnapshot) => {
-                    const mediaKey = childSnapshot.key;
-                    const media = childSnapshot.val();
-                    mediaList.push({ key: mediaKey, ...media });
-
-                    const item = document.createElement('div');
-                    item.className = 'media-item';
-                    item.innerHTML = `
-                        ${media.type === 'video'
-                            ? `<video src="${media.url}" controls></video>`
-                            : `<img src="${media.url}" alt="${media.title}">`
-                        }
-                        <div class="media-title">${media.title || 'No Title'}</div>
-                    `;
-                    item.onclick = () => showOverlay(mediaList.findIndex(m => m.key === mediaKey));
-                    mediaGrid.appendChild(item);
-
-                    // Add marker to map
-                    if (media.lat && media.lon) {
-                        const marker = L.marker([media.lat, media.lon]).addTo(map)
-                            .bindPopup(`<b>${media.title || 'Media'}</b><br>${media.type === 'video' ? `<video width="150" controls><source src="${media.url}" type="video/mp4"></video>` : `<img src="${media.url}" width="150">`}`);
-                        markers.push(marker);
-                    }
-                });
-                document.getElementById('map').style.display = 'block';
-            } else {
-                mediaGrid.innerHTML = '<p>No media found for this date and category.</p>';
-                document.getElementById('map').style.display = 'none';
-            }
-        }, (error) => {
-            console.error("Firebase media load error:", error);
-            mediaGrid.innerHTML = `<p style='color:red'>Could not load media: ${error.message}</p>`;
-        });
-    }
-
-
-    function initializeMap() {
-      if (map) map.remove();
-      map = L.map('map').setView([18.5204, 73.8567], 13); // Default to Pune coordinates
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
-    }
-
-    function clearMapMarkers() {
-      markers.forEach(marker => map.removeLayer(marker));
-      markers = [];
-    }
-
-    function showOverlay(index) {
-        if (mediaList.length === 0) return;
-        currentIndex = index;
-        const item = mediaList[currentIndex];
-        const overlayContent = document.getElementById('overlayContent');
-        overlayContent.innerHTML = item.type === 'video'
-            ? `<video src="${item.url}" controls autoplay loop></video>`
-            : `<img src="${item.url}" alt="${item.title}">`;
-        document.getElementById('overlay').style.display = 'flex';
-    }
-
-    function navigate(dir) {
-      currentIndex = (currentIndex + dir + mediaList.length) % mediaList.length;
-      showOverlay(currentIndex);
-    }
-
-    function closeOverlay(e) {
-      if (e.target.id === 'overlay' || e.target.classList.contains('close-btn')) {
-        document.getElementById('overlay').style.display = 'none';
-        document.getElementById('overlayContent').innerHTML = '';
-      }
-    }
-
-    function toggleDark(input) {
-      const isDark = input.checked;
-      document.body.classList.toggle('dark', isDark);
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }
-
-    function applySavedTheme() {
-      const savedTheme = localStorage.getItem('theme');
-      const isDark = savedTheme === 'dark';
-      document.body.classList.toggle('dark', isDark);
-      const toggle = document.querySelector('.toggle-switch input');
-      if (toggle) toggle.checked = isDark;
-    }
+    function logout(){ auth.signOut().then(_=>location.href='index.html'); }
+    function toggleDark(i){ document.body.classList.toggle('dark',i.checked); localStorage.setItem('theme',i.checked?'dark':'light'); }
+    function applySavedTheme(){ const d = localStorage.getItem('theme')==='dark'; document.body.classList.toggle('dark',d); document.querySelector('.toggle-switch input').checked=d; }
   </script>
 </body>
 </html>
