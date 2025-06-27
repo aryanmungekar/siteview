@@ -318,7 +318,7 @@
             `;
             card.onclick = () => {
               const fileName = proj.file?.replace('.json', '') || child.key;
-              window.location.href = `projects.html?project=${fileName}`;
+  slideTo(`projects.html?project=${fileName}`, 'left');
             };
             const editBtn = document.createElement('button');
             editBtn.textContent = 'Edit';
