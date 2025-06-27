@@ -681,7 +681,11 @@
       db.ref('projects/'+projectKey).once('value').then(snap => {
         const proj = snap.val();
         if (!proj) return alert('Project not found');
-        document.getElementById('projectTitle').textContent = proj.projectName;
+        document.getElementById('projectName').textContent = proj.projectName;
+document.getElementById('projectLocation').textContent = proj.projectLocation || '';
+document.getElementById('projectFile').textContent = projectKey;
+document.getElementById('projectThumb').src = proj.projectThumb || 'default-thumb.jpg';
+
       });
       db.ref('data/'+projectKey).once('value').then(snap=>{
         projectData = snap.val() || {};
