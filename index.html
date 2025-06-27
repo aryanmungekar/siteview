@@ -136,6 +136,17 @@
           });
       }
     });
+
+  
+    
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      // If user is already logged in, redirect to dashboard
+      window.location.href = "dashboard.html";
+    }
+  });
+
+
   </script>
 </body>
 </html>
