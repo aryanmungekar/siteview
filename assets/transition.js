@@ -36,3 +36,27 @@ document.addEventListener('click', function (e) {
 window.addEventListener('pageshow', () => {
   sessionStorage.removeItem('navDirection');
 });
+
+// transition.js
+
+function slideTo(url, direction = 'left') {
+  const transition = document.createElement('div');
+  transition.className = 'page-transition slide-in';
+  document.body.appendChild(transition);
+
+  // Trigger reflow to apply animation
+  void transition.offsetWidth;
+
+  transition.classList.remove('slide-in');
+  transition.classList.add('slide-out');
+
+  setTimeout(() => {
+    window.location.href = url;
+  }, 300); // Match with CSS transition duration
+}
+
+window.addEventListener('pageshow', () => {
+  const transition = document.querySelector('.page-transition');
+  if (transition) transition.remove();
+});
+
