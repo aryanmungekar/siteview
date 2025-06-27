@@ -139,12 +139,21 @@
 
   
     
-  firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-      // If user is already logged in, redirect to dashboard
-      window.location.href = "dashboard.html";
-    }
-  });
+
+  // Fast check: if auth is ready, redirect instantly
+  const user = firebase.auth().currentUser;
+  if (user) {
+    window.location.href = "dashboard.html";
+  } else {
+    // Fallback: wait until Firebase finishes initializing
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        window.location.href = "dashboard.html";
+      }
+    });
+  }
+
+
 
 
   </script>
