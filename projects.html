@@ -600,251 +600,167 @@
   </style>
 </head>
 <body>
-<h1>Ravet</h1>
-<br/>
-<div class="top-section">
-<div class="project-info" id="projectInfo">
-<img alt="Project Thumbnail" class="project-thumb" id="projectThumb" src=""/>
-<div>
-<div class="project-title" id="projectName"></div>
-<div class="project-location" id="projectLocation"></div>
-<div class="project-file" id="projectFile"></div>
-</div>
-</div>
-<div class="slider-section">
-<div class="slider-label"><strong>Select Date:</strong></div>
-<div class="date-button-row" id="dateButtonRow"></div>
-</div>
-</div>
-<div id="categoryButtons" style="display: none;">
-<button onclick="setCategory('images')">Images</button>
-<button onclick="setCategory('panoramic')">Panoramic</button>
-<button onclick="setCategory('video')">Videos</button>
-</div>
-<div id="imageRow"></div>
-<!-- Floating Upload Button -->
-<button class="fab-upload" onclick="alert('Upload clicked!')">
-<i class="fas fa-plus"></i>
-</button>
-<!-- Bottom Navigation -->
-<nav class="bottom-nav">
-<a href="index.html" title="Home"><i class="fas fa-home"></i></a>
-<a href="messages.html" title="Messages"><i class="fas fa-comment-dots"></i></a>
-<a href="account.html" title="Account"><i class="fas fa-user-circle"></i></a>
-</nav>
-<div id="mapPopup">
-<div id="mapHeader">
-<span>Map View</span>
-<button id="closeBtn" title="Close Map">×</button>
-</div>
-<div id="map"></div>
-</div>
-<div id="photoPopup">
-<div class="popupControls">
-<button id="closePhotoBtn">×</button>
-</div>
-<div id="popupTitle"></div>
-<img alt="Preview" id="popupImg" src=""/>
-<div id="navButtons">
-<button id="prevBtn" title="Previous">❮</button>
-<button id="nextBtn" title="Next">❯</button>
-</div>
-</div>
-<!-- Pannellum 360 Viewer -->
-<div id="viewer360">
-<button id="close360Btn">×</button>
-<div id="pano"></div>
-</div>
-<div id="overlay360"></div>
-<div id="videoPopup" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:5000; justify-content:center; align-items:center; flex-direction:column;">
-<button onclick="closeVideoPopup()" style="position:absolute;top:24px;right:32px;font-size:2em;background:#fff;border:none;border-radius:8px;padding:4px 16px;cursor:pointer;">×</button>
-<div id="videoPopupTitle" style="color:#fff;font-size:1.2em;margin-bottom:16px;"></div>
-<video controls="" id="videoPopupPlayer" style="max-width:90vw;max-height:70vh;border-radius:12px;box-shadow:0 8px 32px #000a;"></video>
-</div>
+  <h1 id="projectName">Project</h1>
+  <div class="top-section">
+    <div class="project-info">
+      <img id="projectThumb" class="project-thumb" alt="Thumb" src="default-thumb.jpg">
+      <div>
+        <div class="project-title" id="projectLocation">Location</div>
+        <div class="project-file" id="projectKeyLabel"></div>
+      </div>
+    </div>
+    <div class="slider-section">
+      <div class="slider-label"><strong>Select Date:</strong></div>
+      <div class="date-button-row" id="dateButtons"></div>
+    </div>
+  </div>
 
-    <script src="firebase-config.js"></script>
+  <div id="categoryButtons" style="display: none;">
+    <button onclick="setCategory('images')">Images</button>
+    <button onclick="setCategory('panoramic')">Panoramic</button>
+    <button onclick="setCategory('video')">Videos</button>
+  </div>
 
+  <div id="mediaGrid"></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="firebase-config.js"></script><script src="assets/transition.js"></script><script>
-    let currentUser, projectKey, projectData = {}, mediaData = {images:{},panoramic:{},video:{}}, editingMedia = null;
+  <div id="mapPopup" style="display:none;">
+    <div id="mapHeader"><span>Map View</span><button id="closeMap">×</button></div>
+    <div id="map" style="height:300px;"></div>
+  </div>
 
-    auth.onAuthStateChanged(u => {
-      if (!u) return window.location.href='index.html';
-      currentUser = u;
-      const params = new URLSearchParams(location.search);
-      projectKey = params.get('project');
-      loadProject();
-      applySavedTheme();
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" title="Home"><i class="fas fa-home"></i></a>
+    <a href="upload.html" title="Upload"><i class="fas fa-upload"></i></a>
+    <a href="#" title="Account"><i class="fas fa-user-circle"></i></a>
+  </nav>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    let currentUser, projectKey, selectedDate = null, selectedCategory = 'images';
+
+    auth.onAuthStateChanged(user => {
+      if (!user) return location.href = "index.html";
+      currentUser = user;
+
+      const urlParams = new URLSearchParams(window.location.search);
+      projectKey = urlParams.get("project");
+      if (!projectKey) return alert("Project key missing");
+
+      loadProjectInfo();
+      loadDates();
     });
 
-    function loadProject() {
-      db.ref('projects/'+projectKey).once('value').then(snap => {
+    function loadProjectInfo() {
+      db.ref("projects/" + projectKey).once("value").then(snap => {
         const proj = snap.val();
-        if (!proj) return alert('Project not found');
-        document.getElementById('projectName').textContent = proj.projectName;
-document.getElementById('projectLocation').textContent = proj.projectLocation || '';
-document.getElementById('projectFile').textContent = projectKey;
-document.getElementById('projectThumb').src = proj.projectThumb || 'default-thumb.jpg';
-
-      });
-      db.ref('data/'+projectKey).once('value').then(snap=>{
-        projectData = snap.val() || {};
-        Object.assign(mediaData, projectData);
-        renderMedia();
+        if (!proj) return alert("Project not found");
+        document.getElementById("projectName").textContent = proj.projectName;
+        document.getElementById("projectLocation").textContent = proj.projectLocation || '';
+        document.getElementById("projectThumb").src = proj.projectThumb || "default-thumb.jpg";
+        document.getElementById("projectKeyLabel").textContent = projectKey;
       });
     }
 
-    function renderMedia() {
-      const grid = document.getElementById('mediaGrid');
-      grid.innerHTML = '';
-      let count = 0;
-      ['images','panoramic','video'].forEach(cat=>{
-        const items = mediaData[cat]||{};
-        Object.entries(items).forEach(([k,item])=>{
-          count++;
-          const card = createMediaItem(item,cat,k);
-          grid.appendChild(card);
-        });
-      });
-      document.getElementById('emptyMessage').style.display = count? 'none':'block';
-    }
+    function loadDates() {
+      db.ref("data/" + projectKey).once("value").then(snap => {
+        const data = snap.val() || {};
+        const dateButtons = document.getElementById("dateButtons");
+        dateButtons.innerHTML = '';
 
-    function createMediaItem(item,cat,k) {
-      const card = document.createElement('div');
-      card.className='media-card';
-      let mediaHtml = cat==='video'
-        ? `<video src="${item.url}" controls></video>`
-        : `<img src="${item.url}" />`;
-      card.innerHTML = mediaHtml + `<h4>${item.title}</h4><p>${item.date || ''}</p>`;
-      const actions = document.createElement('div'); actions.className='media-actions';
-      actions.innerHTML = `
-        <button onclick="editMedia('${cat}','${k}')"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteMedia('${cat}','${k}')"><i class="fas fa-trash-alt"></i></button>
-        ${(item.lat && item.lon)? `<button onclick="previewMap(${item.lat},${item.lon},'${item.title}')"><i class="fas fa-map-marker-alt"></i></button>` : ''}
-      `;
-      card.appendChild(actions);
-      return card;
-    }
-
-    function openMediaModal() {
-      editingMedia = null;
-      document.getElementById('modalTitle').textContent = 'Add Media';
-      resetModal();
-      document.getElementById('mediaModal').style.display='flex';
-    }
-    function closeMediaModal() {
-      document.getElementById('mediaModal').style.display='none';
-    }
-    function resetModal() {
-      document.getElementById('mediaFile').value='';
-      document.getElementById('mediaTitle').value='';
-      document.getElementById('mediaCategory').value='images';
-      document.getElementById('customDateToggle').checked=false;
-      document.getElementById('customDateInput').style.display='none';
-      document.getElementById('customDateInput').value='';
-    }
-
-    function editMedia(cat,key) {
-      editingMedia={cat,key};
-      const item=mediaData[cat][key];
-      document.getElementById('modalTitle').textContent='Edit Media';
-      document.getElementById('mediaTitle').value = item.title;
-      document.getElementById('mediaCategory').value=cat;
-      if(item.date){
-        document.getElementById('customDateToggle').checked=true;
-        document.getElementById('customDateInput').style.display='block';
-        document.getElementById('customDateInput').value=item.date;
-      }
-      document.getElementById('mediaModal').style.display='flex';
-    }
-
-    function deleteMedia(cat,k){
-      if(!confirm('Delete media?')) return;
-      delete mediaData[cat][k];
-      saveMediaToFirebase();
-      renderMedia();
-    }
-
-    function submitMedia(){
-      const fileField = document.getElementById('mediaFile');
-      const title = document.getElementById('mediaTitle').value.trim();
-      const cat = document.getElementById('mediaCategory').value;
-      const useCustom = document.getElementById('customDateToggle').checked;
-      const customDate = document.getElementById('customDateInput').value;
-
-      if(!title || (!fileField.files.length && !editingMedia)) return alert('Provide title and file.');
-
-      const key = editingMedia? editingMedia.key: db.ref().push().key;
-      let uploadPromise;
-
-      if(fileField.files.length){
-        const f = fileField.files[0];
-        const cd = cloudinaryConfig;
-        const fd=new FormData();
-        fd.append('file',f);
-        fd.append('upload_preset',cd.uploadPreset);
-        uploadPromise = fetch(cd.apiUrl,{method:'POST',body:fd})
-          .then(res=>res.json())
-          .then(j=>j.secure_url);
-      } else {
-        uploadPromise = Promise.resolve(mediaData[cat][key].url);
-      }
-
-      uploadPromise.then(url=>{
-        if(editingMedia && mediaData[cat] && mediaData[cat][key]){
-          delete mediaData[editingMedia.cat][editingMedia.key];
-        }
-        const item = { title, url };
-        // Date handling
-        if(useCustom && customDate) item.date=customDate;
-        else if(fileField.files.length && fileField.files[0].type.startsWith('image/')){
-          EXIF.getData(fileField.files[0], function(){
-            const dt = EXIF.getTag(this,'DateTimeOriginal');
-            const gpsLat = EXIF.getTag(this,'GPSLatitude');
-            const gpsLon = EXIF.getTag(this,'GPSLongitude');
-            if(dt) item.date = dt.split(' ')[0].replace(/:/g,'-');
-            if(gpsLat && gpsLon){
-              item.lat = gpsLat[0] + gpsLat[1]/60 + gpsLat[2]/3600;
-              item.lon = gpsLon[0] + gpsLon[1]/60 + gpsLon[2]/3600;
-            }
-            finalizeItem();
-          });
+        const dates = Object.keys(data);
+        if (dates.length === 0) {
+          document.getElementById("mediaGrid").innerHTML = '<p style="text-align:center;">No media found</p>';
           return;
         }
-        if(useCustom && customDate) ; else item.date = new Date().toISOString().split('T')[0];
-        finalizeItem();
 
-        function finalizeItem(){
-          mediaData[cat] = mediaData[cat]||{};
-          mediaData[cat][key]=item;
-          saveMediaToFirebase();
-          closeMediaModal();
-          renderMedia();
-        }
+        dates.forEach(date => {
+          const btn = document.createElement("button");
+          btn.textContent = date;
+          btn.onclick = () => { selectedDate = date; showCategories(data[date]); };
+          dateButtons.appendChild(btn);
+        });
+
+        selectedDate = dates[0];
+        showCategories(data[selectedDate]);
       });
     }
 
-    function saveMediaToFirebase(){
-      db.ref('data/'+projectKey).set(mediaData);
+    function showCategories(dayData) {
+      const catButtons = document.getElementById("categoryButtons");
+      catButtons.style.display = "block";
+
+      if (!dayData[selectedCategory]) {
+        if (Object.keys(dayData).length > 0) selectedCategory = Object.keys(dayData)[0];
+        else {
+          document.getElementById("mediaGrid").innerHTML = '<p style="text-align:center;">No media in selected date.</p>';
+          return;
+        }
+      }
+
+      renderMedia(dayData[selectedCategory]);
     }
 
-    function previewMap(lat,lon,title){
-      const mm=document.createElement('div');mm.className='modal';mm.style.zIndex=10001;
-      mm.innerHTML=`<div class="modal-content" style="max-width:600px;">
-        <h3>${title}</h3>
-        <div id="leafletMap" style="height:300px;border-radius:8px;"></div>
-        <button onclick="this.closest('.modal').remove()">Close</button>
-      </div>`;
-      document.body.appendChild(mm);
-      setTimeout(()=>{
-        const map=L.map('leafletMap').setView([lat,lon],16);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM contributors'}).addTo(map);
-        L.marker([lat,lon]).addTo(map).bindPopup(title).openPopup();
-      },10);
+    function setCategory(cat) {
+      selectedCategory = cat;
+      db.ref(`data/${projectKey}/${selectedDate}/${cat}`).once("value").then(snap => {
+        renderMedia(snap.val());
+      });
     }
 
-    function logout(){ auth.signOut().then(_=>location.href='index.html'); }
-    function toggleDark(i){ document.body.classList.toggle('dark',i.checked); localStorage.setItem('theme',i.checked?'dark':'light'); }
-    function applySavedTheme(){ const d = localStorage.getItem('theme')==='dark'; document.body.classList.toggle('dark',d); document.querySelector('.toggle-switch input').checked=d; }
-  </script></body>
+    function renderMedia(mediaItems) {
+      const container = document.getElementById("mediaGrid");
+      container.innerHTML = '';
+
+      if (!mediaItems || Object.keys(mediaItems).length === 0) {
+        container.innerHTML = '<p style="text-align:center;">No media in this category.</p>';
+        return;
+      }
+
+      Object.values(mediaItems).forEach(item => {
+        const card = document.createElement("div");
+        card.className = "media-card";
+
+        if (item.img && selectedCategory === 'images') {
+          card.innerHTML = `<img src="${item.img}" alt="${item.title}"><h4>${item.title}</h4>`;
+        } else if (selectedCategory === 'video') {
+          card.innerHTML = `<video src="${item.img}" controls></video><h4>${item.title}</h4>`;
+        } else if (selectedCategory === 'panoramic') {
+          card.innerHTML = `<img src="${item.img}" alt="${item.title}"><h4>${item.title}</h4>`;
+        }
+
+        if (item.lat && item.lon) {
+          const mapBtn = document.createElement("button");
+          mapBtn.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+          mapBtn.onclick = () => openMap(item.lat, item.lon, item.title);
+          card.appendChild(mapBtn);
+        }
+
+        container.appendChild(card);
+      });
+    }
+
+    function openMap(lat, lon, title) {
+      const popup = document.getElementById("mapPopup");
+      popup.style.display = "block";
+
+      const map = L.map('map').setView([lat, lon], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      L.marker([lat, lon]).addTo(map).bindPopup(title).openPopup();
+
+      document.getElementById("closeMap").onclick = () => {
+        popup.style.display = "none";
+        map.remove();
+      };
+    }
+  </script>
+</body>
 </html>
