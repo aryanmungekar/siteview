@@ -1,24 +1,20 @@
+
 <!DOCTYPE html>
-<html lang="en">
+
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Project Media - SiteView</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-  <link rel="stylesheet" href="assets/style.css">
-  <link rel="stylesheet" href="assets/transition.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<title>House Corners Image Map</title>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<!-- Font Awesome for icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<!-- Leaflet CSS & JS -->
+<link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <!-- EXIF reader -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="firebase-config.js"></script>
+<!-- Pannellum CSS & JS -->
+<link href="https://cdn.jsdelivr.net/npm/pannellum/build/pannellum.css" rel="stylesheet"/>
 
-  <style>
+<style>
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -601,59 +597,72 @@
         height: 60vh;
       }
     }
-    .modal { position: fixed; top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000; }
-    .modal-content { background:#fff;padding:20px;border-radius:10px;width:90%;max-width:400px; }
-    .modal-content input, .modal-content select, .modal-content button { width:100%;padding:10px;margin:8px 0; }
-    #logoutBtn { position:fixed;top:16px;right:16px;background:crimson;color:#fff;padding:8px 16px;border:none;border-radius:8px;cursor:pointer; }
-    .media-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;padding:20px; }
-    .media-card { background:var(--card-bg);border-radius:12px;box-shadow:0 6px 10px rgba(0,0,0,0.1);padding:10px;position:relative; }
-    .media-card img, .media-card video { width:100%;height:120px;object-fit:cover;border-radius:8px; }
-    .media-actions { display:flex;justify-content:space-around;margin-top:8px; }
-    .media-actions button { background:none;border:none;color:var(--primary);cursor:pointer;font-size:18px; }
   </style>
 </head>
 <body>
-  <button id="logoutBtn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
-  <header style="display:flex;justify-content:space-between;align-items:flex-end;padding:20px;">
-    <h1 id="projectTitle">Project</h1>
-    <label class="toggle-switch">
-      <input type="checkbox" onchange="toggleDark(this)">
-      <span class="slider"></span>
-    </label>
-  </header>
+<h1>Ravet</h1>
+<br/>
+<div class="top-section">
+<div class="project-info" id="projectInfo">
+<img alt="Project Thumbnail" class="project-thumb" id="projectThumb" src=""/>
+<div>
+<div class="project-title" id="projectName"></div>
+<div class="project-location" id="projectLocation"></div>
+<div class="project-file" id="projectFile"></div>
+</div>
+</div>
+<div class="slider-section">
+<div class="slider-label"><strong>Select Date:</strong></div>
+<div class="date-button-row" id="dateButtonRow"></div>
+</div>
+</div>
+<div id="categoryButtons" style="display: none;">
+<button onclick="setCategory('images')">Images</button>
+<button onclick="setCategory('panoramic')">Panoramic</button>
+<button onclick="setCategory('video')">Videos</button>
+</div>
+<div id="imageRow"></div>
+<!-- Floating Upload Button -->
+<button class="fab-upload" onclick="alert('Upload clicked!')">
+<i class="fas fa-plus"></i>
+</button>
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+<a href="index.html" title="Home"><i class="fas fa-home"></i></a>
+<a href="messages.html" title="Messages"><i class="fas fa-comment-dots"></i></a>
+<a href="account.html" title="Account"><i class="fas fa-user-circle"></i></a>
+</nav>
+<div id="mapPopup">
+<div id="mapHeader">
+<span>Map View</span>
+<button id="closeBtn" title="Close Map">×</button>
+</div>
+<div id="map"></div>
+</div>
+<div id="photoPopup">
+<div class="popupControls">
+<button id="closePhotoBtn">×</button>
+</div>
+<div id="popupTitle"></div>
+<img alt="Preview" id="popupImg" src=""/>
+<div id="navButtons">
+<button id="prevBtn" title="Previous">❮</button>
+<button id="nextBtn" title="Next">❯</button>
+</div>
+</div>
+<!-- Pannellum 360 Viewer -->
+<div id="viewer360">
+<button id="close360Btn">×</button>
+<div id="pano"></div>
+</div>
+<div id="overlay360"></div>
+<div id="videoPopup" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:5000; justify-content:center; align-items:center; flex-direction:column;">
+<button onclick="closeVideoPopup()" style="position:absolute;top:24px;right:32px;font-size:2em;background:#fff;border:none;border-radius:8px;padding:4px 16px;cursor:pointer;">×</button>
+<div id="videoPopupTitle" style="color:#fff;font-size:1.2em;margin-bottom:16px;"></div>
+<video controls="" id="videoPopupPlayer" style="max-width:90vw;max-height:70vh;border-radius:12px;box-shadow:0 8px 32px #000a;"></video>
+</div>
 
-  <div id="emptyMessage" style="text-align:center;margin-top:40px;display:none;color:#666;font-size:1.2em;">
-    No media found. Tap + to add.
-  </div>
-  <div id="mediaGrid" class="media-grid"></div>
-
-  <button class="fab-upload" onclick="openMediaModal()"><i class="fas fa-plus"></i></button>
-
-  <div id="mediaModal" class="modal" style="display:none">
-    <div class="modal-content">
-      <h3 id="modalTitle">Add Media</h3>
-      <input type="file" id="mediaFile" accept="image/*,video/*"/>
-      <input type="text" id="mediaTitle" placeholder="Title"/>
-      <select id="mediaCategory">
-        <option value="images">Image</option>
-        <option value="panoramic">Panoramic</option>
-        <option value="video">Video</option>
-      </select>
-      <label><input type="checkbox" id="customDateToggle"/> Choose Date</label>
-      <input type="date" id="customDateInput" style="display:none"/>
-      <button onclick="submitMedia()">Save</button>
-      <button onclick="closeMediaModal()">Cancel</button>
-    </div>
-  </div>
-
-  <div class="bottom-nav">
-    <a href="dashboard.html"><i class="fas fa-home"></i></a>
-    <a href="#" onclick="openMediaModal()"><i class="fas fa-upload"></i></a>
-    <a href="#"><i class="fas fa-user-circle"></i></a>
-  </div>
-
-  <script src="assets/transition.js"></script>
-  <script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="firebase-config.js"></script><script src="assets/transition.js"></script><script>
     let currentUser, projectKey, projectData = {}, mediaData = {images:{},panoramic:{},video:{}}, editingMedia = null;
 
     auth.onAuthStateChanged(u => {
@@ -830,6 +839,5 @@
     function logout(){ auth.signOut().then(_=>location.href='index.html'); }
     function toggleDark(i){ document.body.classList.toggle('dark',i.checked); localStorage.setItem('theme',i.checked?'dark':'light'); }
     function applySavedTheme(){ const d = localStorage.getItem('theme')==='dark'; document.body.classList.toggle('dark',d); document.querySelector('.toggle-switch input').checked=d; }
-  </script>
-</body>
+  </script></body>
 </html>
